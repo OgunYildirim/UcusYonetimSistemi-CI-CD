@@ -28,7 +28,7 @@ pipeline {
             steps {
                 echo 'Running Backend Unit Tests...'
                 dir('backend') {
-                    sh 'mvn clean test'
+                    sh 'mvn -B -DskipTests=false test'
                 }
             }
             post {
@@ -46,14 +46,19 @@ pipeline {
                 }
             }
         }
+<<<<<<< HEAD
         
         
+=======
+
+>>>>>>> 295b30f (CI: separate unit and integration tests (surefire excludes, failsafe run) and update Jenkinsfile)
         
         stage('Integration Tests') {
             steps {
-                echo 'Running Integration Tests with Testcontainers...'
+                echo 'Running Integration Tests with Failsafe (no unit tests)'
                 dir('backend') {
-                    sh 'mvn verify -Dspring.profiles.active=test'
+                    // Run only Failsafe integration-test and verify goals to avoid re-running Surefire unit tests
+                    sh 'mvn -B -DskipTests=true org.apache.maven.plugins:maven-failsafe-plugin:3.2.5:integration-test org.apache.maven.plugins:maven-failsafe-plugin:3.2.5:verify -Dspring.profiles.active=test'
                 }
             }
             post {
