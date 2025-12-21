@@ -4,10 +4,10 @@ WORKDIR /app
 COPY pom.xml .
 COPY src ./src
 
-# Chrome browser ve Selenium dependencies (test için)
+# Chrome browser ve Selenium dependencies (GPG hatası giderilmiş güncel sürüm)
 RUN apt-get update && \
-    apt-get install -y wget gnupg2 && \
-    wget -q -O /usr/share/keyrings/google-chrome-keyring.gpg https://dl.google.com/linux/linux_signing_key.pub && \
+    apt-get install -y wget gnupg2 curl --no-install-recommends && \
+    curl -fSsL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor | tee /usr/share/keyrings/google-chrome-keyring.gpg > /dev/null && \
     echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list && \
     apt-get update && \
     apt-get install -y google-chrome-stable xvfb dbus-x11 && \
