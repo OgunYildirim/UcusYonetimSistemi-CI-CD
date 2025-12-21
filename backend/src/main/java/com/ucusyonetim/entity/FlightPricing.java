@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -22,13 +23,13 @@ public class FlightPricing {
     private Flight flight;
 
     @Column(nullable = false)
-    private Double economyPrice;
+    private BigDecimal economyPrice;
 
     @Column(nullable = false)
-    private Double businessPrice;
+    private BigDecimal businessPrice;
 
     @Column(nullable = false)
-    private Double baggagePricePerKg; // 15kg ücretsiz, fazlası için kg başına ücret
+    private BigDecimal baggagePricePerKg; // 15kg ücretsiz, fazlası için kg başına ücret
 
     @Column(nullable = false)
     private Integer freeBaggageKg = 15;

@@ -56,7 +56,9 @@ services:
       - ucus-network
 
   jenkins:
-    image: jenkins/jenkins:lts
+    build:
+      context: ./jenkins
+      dockerfile: Dockerfile
     container_name: ucus-yonetim-jenkins
     user: root
     ports:

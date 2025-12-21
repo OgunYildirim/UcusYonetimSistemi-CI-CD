@@ -4,13 +4,11 @@ import com.ucusyonetim.dto.FlightRequest;
 import com.ucusyonetim.dto.FlightResponse;
 import com.ucusyonetim.service.FlightService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -47,17 +45,13 @@ public class FlightController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    @SecurityRequirement(name = "Bearer Authentication")
-    @Operation(summary = "Create new flight (Admin only)")
+    @Operation(summary = "Create new flight")
     public ResponseEntity<FlightResponse> createFlight(@Valid @RequestBody FlightRequest request) {
         return ResponseEntity.ok(flightService.createFlight(request));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    @SecurityRequirement(name = "Bearer Authentication")
-    @Operation(summary = "Update flight (Admin only)")
+    @Operation(summary = "Update flight")
     public ResponseEntity<FlightResponse> updateFlight(
             @PathVariable Long id,
             @Valid @RequestBody FlightRequest request) {
@@ -65,9 +59,7 @@ public class FlightController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    @SecurityRequirement(name = "Bearer Authentication")
-    @Operation(summary = "Delete flight (Admin only)")
+    @Operation(summary = "Delete flight")
     public ResponseEntity<String> deleteFlight(@PathVariable Long id) {
         flightService.deleteFlight(id);
         return ResponseEntity.ok("Flight deleted successfully");

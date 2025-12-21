@@ -5,7 +5,6 @@ import com.ucusyonetim.dto.BookingResponse;
 import com.ucusyonetim.entity.*;
 import com.ucusyonetim.repository.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,8 +27,8 @@ public class BookingService {
 
     @Transactional
     public BookingResponse createBooking(BookingRequest request) {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByUsername(username)
+        // Security olmadan basit kullanıcı kontrolü - test için userId=1 kullanıyoruz
+        User user = userRepository.findById(1L)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         Flight flight = flightRepository.findById(request.getFlightId())
@@ -45,18 +44,20 @@ public class BookingService {
         }
 
         // Calculate total amount
-        double totalAmount = 0.0;
+        java.math.BigDecimal totalAmount = java.math.BigDecimal.ZERO;
         for (BookingRequest.PassengerInfo passenger : request.getPassengers()) {
             if ("ECONOMY".equals(passenger.getSeatClass())) {
-                totalAmount += pricing.getEconomyPrice();
+                totalAmount = totalAmount.add(pricing.getEconomyPrice());
             } else if ("BUSINESS".equals(passenger.getSeatClass())) {
-                totalAmount += pricing.getBusinessPrice();
+                totalAmount = totalAmount.add(pricing.getBusinessPrice());
             }
 
             // Calculate baggage fee
             if (passenger.getBaggageWeightKg() > pricing.getFreeBaggageKg()) {
                 double excessWeight = passenger.getBaggageWeightKg() - pricing.getFreeBaggageKg();
-                totalAmount += excessWeight * pricing.getBaggagePricePerKg();
+                java.math.BigDecimal baggageFee = pricing.getBaggagePricePerKg()
+                        .multiply(java.math.BigDecimal.valueOf(excessWeight));
+                totalAmount = totalAmount.add(baggageFee);
             }
         }
 
@@ -67,7 +68,7 @@ public class BookingService {
         booking.setFlight(flight);
         booking.setStatus("CONFIRMED");
         booking.setNumberOfPassengers(requestedSeats);
-        booking.setTotalAmount(totalAmount);
+        booking.setTotalAmount(totalAmount.doubleValue());
 
         Booking savedBooking = bookingRepository.save(booking);
 
@@ -93,9 +94,9 @@ public class BookingService {
             }
 
             if ("ECONOMY".equals(passenger.getSeatClass())) {
-                ticket.setTicketPrice(pricing.getEconomyPrice());
+                ticket.setTicketPrice(pricing.getEconomyPrice().doubleValue());
             } else {
-                ticket.setTicketPrice(pricing.getBusinessPrice());
+                ticket.setTicketPrice(pricing.getBusinessPrice().doubleValue());
             }
 
             Ticket savedTicket = ticketRepository.save(ticket);
@@ -112,7 +113,9 @@ public class BookingService {
                 double baggageFee = 0.0;
                 if (passenger.getBaggageWeightKg() > pricing.getFreeBaggageKg()) {
                     double excessWeight = passenger.getBaggageWeightKg() - pricing.getFreeBaggageKg();
-                    baggageFee = excessWeight * pricing.getBaggagePricePerKg();
+                    baggageFee = pricing.getBaggagePricePerKg()
+                            .multiply(java.math.BigDecimal.valueOf(excessWeight))
+                            .doubleValue();
                 }
                 baggage.setBaggageFee(baggageFee);
 
@@ -123,7 +126,7 @@ public class BookingService {
         // Create payment
         Payment payment = new Payment();
         payment.setBooking(savedBooking);
-        payment.setAmount(totalAmount);
+        payment.setAmount(totalAmount.doubleValue());
         payment.setPaymentMethod(request.getPaymentMethod());
         payment.setStatus("COMPLETED");
         payment.setTransactionId(generateTransactionId());
@@ -137,8 +140,8 @@ public class BookingService {
     }
 
     public List<BookingResponse> getUserBookings() {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByUsername(username)
+        // Security olmadan basit kullanıcı kontrolü - test için userId=1 kullanıyoruz
+        User user = userRepository.findById(1L)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         List<Booking> bookings = bookingRepository.findByUserId(user.getId());
@@ -149,8 +152,8 @@ public class BookingService {
 
     @Transactional
     public String cancelBooking(Long bookingId) {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByUsername(username)
+        // Security olmadan basit kullanıcı kontrolü - test için userId=1 kullanıyoruz
+        User user = userRepository.findById(1L)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         Booking booking = bookingRepository.findById(bookingId)

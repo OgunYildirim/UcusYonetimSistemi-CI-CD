@@ -3,6 +3,7 @@ package com.ucusyonetim.dto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -22,6 +23,6 @@ public class FlightResponse {
     private Integer availableSeats;
     private Integer availableEconomySeats;
     private Integer availableBusinessSeats;
-    private Double economyPrice;
-    private Double businessPrice;
+    private BigDecimal economyPrice;
+    private BigDecimal businessPrice;
 }

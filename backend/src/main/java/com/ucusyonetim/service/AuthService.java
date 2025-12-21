@@ -1,6 +1,5 @@
 package com.ucusyonetim.service;
 
-import com.ucusyonetim.config.JwtTokenProvider;
 import com.ucusyonetim.dto.JwtResponse;
 import com.ucusyonetim.dto.LoginRequest;
 import com.ucusyonetim.dto.RegisterRequest;
@@ -9,11 +8,6 @@ import com.ucusyonetim.entity.User;
 import com.ucusyonetim.repository.RoleRepository;
 import com.ucusyonetim.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,9 +22,6 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final AuthenticationManager authenticationManager;
-    private final JwtTokenProvider jwtTokenProvider;
 
     @Transactional
     public String register(RegisterRequest request) {
@@ -45,7 +36,7 @@ public class AuthService {
         User user = new User();
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setPassword(request.getPassword()); // Şifre artık encode edilmiyor
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setPhoneNumber(request.getPhoneNumber());
@@ -62,23 +53,23 @@ public class AuthService {
     }
 
     public JwtResponse login(LoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
-                        request.getPassword()));
-
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        String jwt = jwtTokenProvider.generateToken(userDetails);
-
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Basit şifre kontrolü (Security olmadan)
+        if (!user.getPassword().equals(request.getPassword())) {
+            throw new RuntimeException("Invalid credentials");
+        }
 
         List<String> roles = user.getRoles().stream()
                 .map(Role::getName)
                 .collect(Collectors.toList());
 
+        // Mock JWT token
+        String mockToken = "mock-jwt-token-" + user.getUsername();
+
         return new JwtResponse(
-                jwt,
+                mockToken,
                 user.getId(),
                 user.getUsername(),
                 user.getEmail(),

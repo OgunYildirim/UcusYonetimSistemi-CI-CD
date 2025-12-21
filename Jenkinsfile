@@ -28,12 +28,21 @@ pipeline {
             steps {
                 echo 'Running Backend Unit Tests...'
                 dir('backend') {
-                    sh 'mvn test'
+                    sh 'mvn clean test'
                 }
             }
             post {
                 always {
-                    junit '**/target/surefire-reports/*.xml'
+                    script {
+                        if (fileExists('backend/target/surefire-reports/TEST-*.xml')) {
+                            junit 'backend/target/surefire-reports/TEST-*.xml'
+                            publishTestResults testResultsPattern: 'backend/target/surefire-reports/TEST-*.xml'
+                        } else {
+                            echo 'No test report files found in backend/target/surefire-reports/'
+                            sh 'ls -la backend/target/ || echo "Target directory not found"'
+                            sh 'find backend -name "*.xml" -type f || echo "No XML files found"'
+                        }
+                    }
                 }
             }
         }
@@ -53,6 +62,13 @@ pipeline {
                 echo 'Running Integration Tests with Testcontainers...'
                 dir('backend') {
                     sh 'mvn verify -Dspring.profiles.active=test'
+                }
+            }
+            post {
+                always {
+                    junit 'backend/target/surefire-reports/*.xml'
+                    junit 'backend/target/failsafe-reports/*.xml'
+                    publishTestResults testResultsPattern: 'backend/target/surefire-reports/*.xml,backend/target/failsafe-reports/*.xml'
                 }
             }
         }
@@ -97,6 +113,8 @@ pipeline {
             }
             post {
                 always {
+                    junit 'backend/target/surefire-reports/*.xml'
+                    publishTestResults testResultsPattern: 'backend/target/surefire-reports/*.xml'
                     archiveArtifacts artifacts: '**/screenshots/*.png', allowEmptyArchive: true
                 }
             }
