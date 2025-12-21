@@ -64,10 +64,10 @@ pipeline {
 
         stage('Build Docker Images') {
             steps {
-                echo 'Building Docker Images...'
+                echo 'Building Docker Images without Buildx...'
                 script {
-                    // Docker Compose plugin hatasını aşmak için alternatifli komut
-                    sh 'docker compose build || docker-compose build'
+                    // DOCKER_BUILDKIT=0 değişkeni Buildx gereksinimini ortadan kaldırır
+                    sh 'export DOCKER_BUILDKIT=0 && docker-compose build'
                 }
             }
         }
