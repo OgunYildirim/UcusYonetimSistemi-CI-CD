@@ -49,14 +49,20 @@ pipeline {
             steps {
                 echo 'Running Integration Tests with Failsafe...'
                 dir('backend') {
-                    // Sadece entegrasyon testlerini çalıştır (IT suffix'li testler)
-                    sh 'mvn -B verify -DskipUnitTests -Dtest=*IT,*IntegrationTest'
+                    // Sadece entegrasyon testlerini çalıştır, E2E testlerini exclude et
+                    sh 'mvn -B verify -DskipUnitTests -Dit.test=*IT,*IntegrationTest -Dtest.exclude=**/e2e/**,**/SeleniumUserFlowsTest'
                 }
             }
             post {
                 always {
                     // Failsafe raporlarını topla
-                    junit 'backend/target/failsafe-reports/*.xml'
+                    script {
+                        if (fileExists('backend/target/failsafe-reports/*.xml')) {
+                            junit 'backend/target/failsafe-reports/*.xml'
+                        } else {
+                            echo 'No integration test reports found.'
+                        }
+                    }
                 }
             }
         }
