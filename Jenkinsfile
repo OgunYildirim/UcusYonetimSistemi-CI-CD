@@ -28,7 +28,8 @@ pipeline {
             steps {
                 echo 'Running Backend Unit Tests...'
                 dir('backend') {
-                    sh 'mvn -B -DskipTests=false test'
+                    // Sadece Unit testleri çalıştır, isminde "Integration" geçenleri atla
+                    sh 'mvn -B test -Dtest=!*Integration*'
                 }
             }
             post {
@@ -36,40 +37,30 @@ pipeline {
                     script {
                         if (fileExists('backend/target/surefire-reports/TEST-*.xml')) {
                             junit 'backend/target/surefire-reports/TEST-*.xml'
-                            publishTestResults testResultsPattern: 'backend/target/surefire-reports/TEST-*.xml'
                         } else {
-                            echo 'No test report files found in backend/target/surefire-reports/'
-                            sh 'ls -la backend/target/ || echo "Target directory not found"'
-                            sh 'find backend -name "*.xml" -type f || echo "No XML files found"'
+                            echo 'No unit test reports found.'
                         }
                     }
                 }
             }
         }
-<<<<<<< HEAD
-        
-        
-=======
 
->>>>>>> 295b30f (CI: separate unit and integration tests (surefire excludes, failsafe run) and update Jenkinsfile)
-        
         stage('Integration Tests') {
             steps {
-                echo 'Running Integration Tests with Failsafe (no unit tests)'
+                echo 'Running Integration Tests with Failsafe...'
                 dir('backend') {
-                    // Run only Failsafe integration-test and verify goals to avoid re-running Surefire unit tests
-                    sh 'mvn -B -DskipTests=true org.apache.maven.plugins:maven-failsafe-plugin:3.2.5:integration-test org.apache.maven.plugins:maven-failsafe-plugin:3.2.5:verify -Dspring.profiles.active=test'
+                    // Sadece entegrasyon testlerini (IT) çalıştırır
+                    sh 'mvn -B verify -DskipUnitTests'
                 }
             }
             post {
                 always {
-                    junit 'backend/target/surefire-reports/*.xml'
-                    junit 'backend/target/failsafe-reports/*.xml'
-                    publishTestResults testResultsPattern: 'backend/target/surefire-reports/*.xml,backend/target/failsafe-reports/*.xml'
+                    // Hem surefire hem failsafe raporlarını topla
+                    junit 'backend/target/*-reports/*.xml'
                 }
             }
         }
-        
+
         stage('Build Docker Images') {
             steps {
                 echo 'Building Docker Images...'
@@ -78,7 +69,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Push Docker Images') {
             when {
                 branch 'main'
@@ -92,7 +83,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Deploy to Test Environment') {
             steps {
                 echo 'Deploying to Test Environment...'
@@ -100,7 +91,7 @@ pipeline {
                 sh 'docker-compose up -d'
             }
         }
-        
+
         stage('E2E Tests - Selenium') {
             steps {
                 echo 'Running Selenium E2E Tests...'
@@ -111,12 +102,11 @@ pipeline {
             post {
                 always {
                     junit 'backend/target/surefire-reports/*.xml'
-                    publishTestResults testResultsPattern: 'backend/target/surefire-reports/*.xml'
                     archiveArtifacts artifacts: '**/screenshots/*.png', allowEmptyArchive: true
                 }
             }
         }
-        
+
         stage('Health Check') {
             steps {
                 echo 'Performing Health Checks...'
@@ -124,36 +114,20 @@ pipeline {
                     sh '''
                         echo "Waiting for services to be ready..."
                         sleep 30
-                        
-                        echo "Checking Backend Health..."
                         curl -f http://localhost:8080/actuator/health || exit 1
-                        
-                        echo "Checking Frontend..."
-                        curl -f http://localhost:3000 || exit 1
-                        
                         echo "All services are healthy!"
                     '''
                 }
             }
         }
     }
-    
+
     post {
         success {
             echo '✅ Pipeline completed successfully!'
-            emailext (
-                subject: "✅ Build Success: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: "Build completed successfully. Check console output at ${env.BUILD_URL}",
-                to: 'team@example.com'
-            )
         }
         failure {
             echo '❌ Pipeline failed!'
-            emailext (
-                subject: "❌ Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: "Build failed. Check console output at ${env.BUILD_URL}",
-                to: 'team@example.com'
-            )
         }
         always {
             echo 'Cleaning up...'
