@@ -139,7 +139,9 @@
                     <excludes>
                         <exclude>**/*IT.java</exclude>
                         <exclude>**/*IntegrationTest.java</exclude>
-                        <exclude>**/e2e/*.java</exclude>
+                        <exclude>**/e2e/**/*Test.java</exclude>
+                        <exclude>**/*SeleniumTest.java</exclude>
+                        <exclude>**/SeleniumUserFlowsTest.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>
@@ -160,7 +162,8 @@
                     <includes>
                         <include>**/*IT.java</include>
                         <include>**/*IntegrationTest.java</include>
-                        <include>**/e2e/*Test.java</include>
+                        <include>**/e2e/**/*Test.java</include>
+                        <include>**/SeleniumUserFlowsTest.java</include>
                     </includes>
                 </configuration>
             </plugin>

@@ -28,8 +28,8 @@ pipeline {
             steps {
                 echo 'Running Backend Unit Tests...'
                 dir('backend') {
-                    // Sadece Unit testleri çalıştır, isminde "Integration" geçenleri atla
-                    sh 'mvn -B test -Dtest=!*Integration*'
+                    // Sadece Unit testleri çalıştır, E2E testlerini exclude et
+                    sh 'mvn -B test -Dtest=!*Integration*,!SeleniumUserFlowsTest,!**/e2e/**'
                 }
             }
             post {
@@ -49,14 +49,14 @@ pipeline {
             steps {
                 echo 'Running Integration Tests with Failsafe...'
                 dir('backend') {
-                    // Sadece entegrasyon testlerini (IT) çalıştırır
-                    sh 'mvn -B verify -DskipUnitTests'
+                    // Sadece entegrasyon testlerini çalıştır (IT suffix'li testler)
+                    sh 'mvn -B verify -DskipUnitTests -Dtest=*IT,*IntegrationTest'
                 }
             }
             post {
                 always {
-                    // Hem surefire hem failsafe raporlarını topla
-                    junit 'backend/target/*-reports/*.xml'
+                    // Failsafe raporlarını topla
+                    junit 'backend/target/failsafe-reports/*.xml'
                 }
             }
         }
@@ -102,16 +102,6 @@ pipeline {
                 script {
                     sh '''
                         echo "Waiting for services to be ready..."
-                        # Backend health check
-                        for i in {1..30}; do
-                            if curl -f http://localhost:8080/actuator/health 2>/dev/null; then
-                                echo "Backend is healthy!"
-                                break
-                            fi
-                            echo "Attempt $i: Backend not ready yet, waiting..."
-                            sleep 10
-                        done
-
                         # Frontend health check
                         for i in {1..30}; do
                             if curl -f http://localhost:3000 2>/dev/null; then
@@ -122,54 +112,53 @@ pipeline {
                             sleep 10
                         done
 
-                        echo "All services are healthy!"
+                        echo "Services are ready for E2E testing!"
                     '''
                 }
             }
         }
 
-        stage('E2E Scenario 1 - Selenium Login Test') {
+        stage('E2E Scenario 1 - Login Test') {
             steps {
                 echo 'Running E2E Scenario 1: User Login Flow...'
                 dir('backend') {
-                    // Selenium testini scenario=1 ile çalıştır
-                    sh 'mvn -B test -Dtest=SeleniumUserFlowsTest#scenario1_loginFlows -Dselenium.scenario=1 -Dfrontend.base=http://localhost:3000 -Dbackend.base=http://localhost:8080 -Dspring.profiles.active=test'
+                    sh 'mvn -B test -Dtest=SeleniumUserFlowsTest#scenario1_loginFlows -Dselenium.scenario=1 -Dfrontend.base=http://localhost:3000 -Dbackend.base=http://localhost:8080'
                 }
             }
             post {
                 always {
                     junit 'backend/target/surefire-reports/TEST-*.xml'
-                    archiveArtifacts artifacts: '**/screenshots/*.png', allowEmptyArchive: true
+                    archiveArtifacts artifacts: '**/screenshots/REQ_101*.png', allowEmptyArchive: true
                 }
             }
         }
 
-        stage('E2E Scenario 2 - Selenium Admin Flight Test') {
+        stage('E2E Scenario 2 - Admin Flight Test') {
             steps {
                 echo 'Running E2E Scenario 2: Admin Flight Management...'
                 dir('backend') {
-                    sh 'mvn -B test -Dtest=SeleniumUserFlowsTest#scenario2_adminAddFlight -Dselenium.scenario=2 -Dfrontend.base=http://localhost:3000 -Dbackend.base=http://localhost:8080 -Dspring.profiles.active=test'
+                    sh 'mvn -B test -Dtest=SeleniumUserFlowsTest#scenario2_adminAddFlight -Dselenium.scenario=2 -Dfrontend.base=http://localhost:3000 -Dbackend.base=http://localhost:8080'
                 }
             }
             post {
                 always {
                     junit 'backend/target/surefire-reports/TEST-*.xml'
-                    archiveArtifacts artifacts: '**/screenshots/*.png', allowEmptyArchive: true
+                    archiveArtifacts artifacts: '**/screenshots/REQ_102*.png', allowEmptyArchive: true
                 }
             }
         }
 
-        stage('E2E Scenario 3 - Selenium User Booking Test') {
+        stage('E2E Scenario 3 - User Booking Test') {
             steps {
                 echo 'Running E2E Scenario 3: User Flight Booking...'
                 dir('backend') {
-                    sh 'mvn -B test -Dtest=SeleniumUserFlowsTest#scenario3_userFlightBooking -Dselenium.scenario=3 -Dfrontend.base=http://localhost:3000 -Dbackend.base=http://localhost:8080 -Dspring.profiles.active=test'
+                    sh 'mvn -B test -Dtest=SeleniumUserFlowsTest#scenario3_userFlightBooking -Dselenium.scenario=3 -Dfrontend.base=http://localhost:3000 -Dbackend.base=http://localhost:8080'
                 }
             }
             post {
                 always {
                     junit 'backend/target/surefire-reports/TEST-*.xml'
-                    archiveArtifacts artifacts: '**/screenshots/*.png', allowEmptyArchive: true
+                    archiveArtifacts artifacts: '**/screenshots/REQ_103*.png', allowEmptyArchive: true
                 }
             }
         }
