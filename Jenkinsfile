@@ -47,15 +47,7 @@ pipeline {
             }
         }
         
-        stage('Build Frontend') {
-            steps {
-                echo 'Building React Frontend...'
-                dir('frontend') {
-                    sh 'npm ci'
-                    sh 'npm run build'
-                }
-            }
-        }
+        
         
         stage('Integration Tests') {
             steps {
