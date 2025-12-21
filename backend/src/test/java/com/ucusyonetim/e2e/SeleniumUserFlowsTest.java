@@ -27,10 +27,10 @@ public class SeleniumUserFlowsTest {
     private WebDriver driver;
     private WebDriverWait wait;
 
-    // Sistem özelliklerinden değerleri al, yoksa default kullan
-    private static final String SELENIUM_SCENARIO = System.getProperty("selenium.scenario", "1"); // Test için default 1 yaptım
-    private static final String FRONTEND_BASE = System.getProperty("frontend.base", "http://localhost:3000");
-    private static final String BACKEND_BASE = System.getProperty("backend.base", "http://localhost:8080");
+    // Sistem özelliklerinden değerleri al, Docker network için default'lar
+    private static final String SELENIUM_SCENARIO = System.getProperty("selenium.scenario", "1");
+    private static final String FRONTEND_BASE = System.getProperty("frontend.base", "http://ucus-yonetim-frontend");
+    private static final String BACKEND_BASE = System.getProperty("backend.base", "http://ucus-yonetim-backend:8080");
 
     @BeforeEach
     void setUp() {
@@ -38,6 +38,9 @@ public class SeleniumUserFlowsTest {
         WebDriverManager.chromedriver().setup();
 
         ChromeOptions options = new ChromeOptions();
+        // Alpine Linux Chromium browser kullanımı
+        options.setBinary("/usr/bin/chromium-browser");
+
         // Docker container için optimal ayarlar
         options.addArguments("--headless=new"); // Yeni headless modu
         options.addArguments("--no-sandbox"); // Docker güvenlik
@@ -51,6 +54,8 @@ public class SeleniumUserFlowsTest {
         options.addArguments("--disable-background-timer-throttling"); // Timer kısıtlamaları
         options.addArguments("--disable-renderer-backgrounding"); // Renderer optimizasyonları
         options.addArguments("--disable-backgrounding-occluded-windows");
+        options.addArguments("--single-process"); // Alpine Docker için
+        options.addArguments("--disable-features=VizDisplayCompositor"); // Render iyileştirmesi
 
         driver = new ChromeDriver(options);
         wait = new WebDriverWait(driver, Duration.ofSeconds(30)); // Daha uzun timeout

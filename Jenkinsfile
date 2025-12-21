@@ -127,13 +127,33 @@ pipeline {
         stage('E2E Scenario 1 - Login Test') {
             steps {
                 echo 'Running E2E Scenario 1: User Login Flow...'
-                dir('backend') {
-                    sh 'mvn -B test -Dtest=SeleniumUserFlowsTest#scenario1_loginFlows -Dselenium.scenario=1 -Dfrontend.base=http://localhost:3000 -Dbackend.base=http://localhost:8080'
+                script {
+                    // Backend container'da Selenium testini çalıştır
+                    sh '''
+                        docker exec ucus-yonetim-backend bash -c "
+                            cd /app &&
+                            export DISPLAY=:99 &&
+                            Xvfb :99 -screen 0 1920x1080x24 > /dev/null 2>&1 &
+                            java -cp 'target/classes:target/test-classes:/root/.m2/repository/org/seleniumhq/selenium/selenium-java/4.14.1/selenium-java-4.14.1.jar:/root/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.10.1/junit-jupiter-engine-5.10.1.jar' \\
+                            org.junit.platform.console.ConsoleLauncher \\
+                            --select-method com.ucusyonetim.e2e.SeleniumUserFlowsTest#scenario1_loginFlows \\
+                            -Dselenium.scenario=1 \\
+                            -Dfrontend.base=http://ucus-yonetim-frontend \\
+                            -Dbackend.base=http://ucus-yonetim-backend:8080
+                        "
+                    '''
                 }
             }
             post {
                 always {
-                    junit 'backend/target/surefire-reports/TEST-*.xml'
+                    // Test sonuçlarını kopyala
+                    sh 'docker cp ucus-yonetim-backend:/app/target/surefire-reports/. backend/target/surefire-reports/ || true'
+                    sh 'docker cp ucus-yonetim-backend:/app/target/screenshots/. backend/target/screenshots/ || true'
+                    script {
+                        if (fileExists('backend/target/surefire-reports/TEST-*.xml')) {
+                            junit 'backend/target/surefire-reports/TEST-*.xml'
+                        }
+                    }
                     archiveArtifacts artifacts: '**/screenshots/REQ_101*.png', allowEmptyArchive: true
                 }
             }
@@ -142,13 +162,31 @@ pipeline {
         stage('E2E Scenario 2 - Admin Flight Test') {
             steps {
                 echo 'Running E2E Scenario 2: Admin Flight Management...'
-                dir('backend') {
-                    sh 'mvn -B test -Dtest=SeleniumUserFlowsTest#scenario2_adminAddFlight -Dselenium.scenario=2 -Dfrontend.base=http://localhost:3000 -Dbackend.base=http://localhost:8080'
+                script {
+                    sh '''
+                        docker exec ucus-yonetim-backend bash -c "
+                            cd /app &&
+                            export DISPLAY=:99 &&
+                            Xvfb :99 -screen 0 1920x1080x24 > /dev/null 2>&1 &
+                            java -cp 'target/classes:target/test-classes:/root/.m2/repository/org/seleniumhq/selenium/selenium-java/4.14.1/selenium-java-4.14.1.jar:/root/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.10.1/junit-jupiter-engine-5.10.1.jar' \\
+                            org.junit.platform.console.ConsoleLauncher \\
+                            --select-method com.ucusyonetim.e2e.SeleniumUserFlowsTest#scenario2_adminAddFlight \\
+                            -Dselenium.scenario=2 \\
+                            -Dfrontend.base=http://ucus-yonetim-frontend \\
+                            -Dbackend.base=http://ucus-yonetim-backend:8080
+                        "
+                    '''
                 }
             }
             post {
                 always {
-                    junit 'backend/target/surefire-reports/TEST-*.xml'
+                    sh 'docker cp ucus-yonetim-backend:/app/target/surefire-reports/. backend/target/surefire-reports/ || true'
+                    sh 'docker cp ucus-yonetim-backend:/app/target/screenshots/. backend/target/screenshots/ || true'
+                    script {
+                        if (fileExists('backend/target/surefire-reports/TEST-*.xml')) {
+                            junit 'backend/target/surefire-reports/TEST-*.xml'
+                        }
+                    }
                     archiveArtifacts artifacts: '**/screenshots/REQ_102*.png', allowEmptyArchive: true
                 }
             }
@@ -157,13 +195,31 @@ pipeline {
         stage('E2E Scenario 3 - User Booking Test') {
             steps {
                 echo 'Running E2E Scenario 3: User Flight Booking...'
-                dir('backend') {
-                    sh 'mvn -B test -Dtest=SeleniumUserFlowsTest#scenario3_userFlightBooking -Dselenium.scenario=3 -Dfrontend.base=http://localhost:3000 -Dbackend.base=http://localhost:8080'
+                script {
+                    sh '''
+                        docker exec ucus-yonetim-backend bash -c "
+                            cd /app &&
+                            export DISPLAY=:99 &&
+                            Xvfb :99 -screen 0 1920x1080x24 > /dev/null 2>&1 &
+                            java -cp 'target/classes:target/test-classes:/root/.m2/repository/org/seleniumhq/selenium/selenium-java/4.14.1/selenium-java-4.14.1.jar:/root/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.10.1/junit-jupiter-engine-5.10.1.jar' \\
+                            org.junit.platform.console.ConsoleLauncher \\
+                            --select-method com.ucusyonetim.e2e.SeleniumUserFlowsTest#scenario3_userFlightBooking \\
+                            -Dselenium.scenario=3 \\
+                            -Dfrontend.base=http://ucus-yonetim-frontend \\
+                            -Dbackend.base=http://ucus-yonetim-backend:8080
+                        "
+                    '''
                 }
             }
             post {
                 always {
-                    junit 'backend/target/surefire-reports/TEST-*.xml'
+                    sh 'docker cp ucus-yonetim-backend:/app/target/surefire-reports/. backend/target/surefire-reports/ || true'
+                    sh 'docker cp ucus-yonetim-backend:/app/target/screenshots/. backend/target/screenshots/ || true'
+                    script {
+                        if (fileExists('backend/target/surefire-reports/TEST-*.xml')) {
+                            junit 'backend/target/surefire-reports/TEST-*.xml'
+                        }
+                    }
                     archiveArtifacts artifacts: '**/screenshots/REQ_103*.png', allowEmptyArchive: true
                 }
             }
