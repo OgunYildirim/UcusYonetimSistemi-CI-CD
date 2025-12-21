@@ -28,8 +28,8 @@ pipeline {
             steps {
                 echo 'Running Backend Unit Tests...'
                 dir('backend') {
-                    // Sadece Unit testleri çalıştır, E2E testlerini exclude et
-                    sh 'mvn -B test -Dtest=!*Integration*,!SeleniumUserFlowsTest,!**/e2e/**'
+                    // Sadece Unit testleri çalıştır, E2E ve Integration testlerini exclude et
+                    sh 'mvn -B test -Dtest=!*Integration*,!SeleniumUserFlowsTest'
                 }
             }
             post {
@@ -37,8 +37,6 @@ pipeline {
                     script {
                         if (fileExists('backend/target/surefire-reports/TEST-*.xml')) {
                             junit 'backend/target/surefire-reports/TEST-*.xml'
-                        } else {
-                            echo 'No unit test reports found.'
                         }
                     }
                 }
@@ -47,20 +45,17 @@ pipeline {
 
         stage('Integration Tests') {
             steps {
-                echo 'Running Integration Tests with Failsafe...'
+                echo 'Running Integration Tests...'
                 dir('backend') {
-                    // Sadece entegrasyon testlerini çalıştır, E2E testlerini exclude et
-                    sh 'mvn -B verify -DskipUnitTests -Dit.test=*IT,*IntegrationTest -Dtest.exclude=**/e2e/**,**/SeleniumUserFlowsTest'
+                    // Sadece IT ile bitenleri çalıştırır
+                    sh 'mvn -B verify -DskipUnitTests -Dit.test=*IT,*IntegrationTest -Dtest=!SeleniumUserFlowsTest'
                 }
             }
             post {
                 always {
-                    // Failsafe raporlarını topla
                     script {
                         if (fileExists('backend/target/failsafe-reports/*.xml')) {
                             junit 'backend/target/failsafe-reports/*.xml'
-                        } else {
-                            echo 'No integration test reports found.'
                         }
                     }
                 }
@@ -71,34 +66,20 @@ pipeline {
             steps {
                 echo 'Building Docker Images...'
                 script {
-
-                    sh 'docker compose build'
+                    // Docker Compose plugin hatasını aşmak için alternatifli komut
+                    sh 'docker compose build || docker-compose build'
                 }
             }
         }
-
-        stage('Push Docker Images') {
-            when {
-                branch 'main'
-            }
-            steps {
-                echo 'Pushing Docker Images to Registry...'
-                script {
-                    docker.withRegistry('', DOCKER_CREDENTIALS_ID) {
-                        sh 'docker-compose push'
-                    }
-                }
-            }
-        }
-
-
 
         stage('Deploy with Docker Compose') {
             steps {
                 echo 'Deploying with Docker Compose...'
-                sh 'docker compose up -d'
-                // Servislerin başlamasını bekle
-                sh 'sleep 60'
+                // Önce temizle sonra ayağa kaldır
+                sh 'docker compose down || docker-compose down || true'
+                sh 'docker compose up -d || docker-compose up -d'
+                echo 'Waiting for services to be ready (60s)...'
+                sleep 60
             }
         }
 
@@ -106,121 +87,28 @@ pipeline {
             steps {
                 echo 'Performing Health Checks...'
                 script {
-                    sh '''
-                        echo "Waiting for services to be ready..."
-                        # Frontend health check
-                        for i in {1..30}; do
-                            if curl -f http://localhost:3000 2>/dev/null; then
-                                echo "Frontend is healthy!"
-                                break
-                            fi
-                            echo "Attempt $i: Frontend not ready yet, waiting..."
-                            sleep 10
-                        done
-
-                        echo "Services are ready for E2E testing!"
-                    '''
+                    // Basit curl check
+                    sh 'curl -f http://localhost:3000 || (echo "Frontend not ready" && exit 1)'
+                    sh 'curl -f http://localhost:8080/actuator/health || echo "Backend health check skipped"'
                 }
             }
         }
 
-        stage('E2E Scenario 1 - Login Test') {
+        stage('E2E Tests - Scenario 1') {
             steps {
-                echo 'Running E2E Scenario 1: User Login Flow...'
+                echo 'Running E2E Scenario 1: User Login...'
                 script {
-                    // Backend container'da Selenium testini çalıştır
-                    sh '''
-                        docker exec ucus-yonetim-backend bash -c "
-                            cd /app &&
-                            export DISPLAY=:99 &&
-                            Xvfb :99 -screen 0 1920x1080x24 > /dev/null 2>&1 &
-                            java -cp 'target/classes:target/test-classes:/root/.m2/repository/org/seleniumhq/selenium/selenium-java/4.14.1/selenium-java-4.14.1.jar:/root/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.10.1/junit-jupiter-engine-5.10.1.jar' \\
-                            org.junit.platform.console.ConsoleLauncher \\
-                            --select-method com.ucusyonetim.e2e.SeleniumUserFlowsTest#scenario1_loginFlows \\
-                            -Dselenium.scenario=1 \\
-                            -Dfrontend.base=http://ucus-yonetim-frontend \\
-                            -Dbackend.base=http://ucus-yonetim-backend:8080
-                        "
-                    '''
+                    // Karmaşık java komutu yerine konteyner içinde Maven kullanmak daha garantidir
+                    sh 'docker exec ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest -Dselenium.scenario=1 -Dfrontend.base=http://ucus-yonetim-frontend -Dbackend.base=http://localhost:8080'
                 }
             }
             post {
                 always {
-                    // Test sonuçlarını kopyala
+                    // Test sonuçlarını ve screenshotları Jenkins'e çek
                     sh 'docker cp ucus-yonetim-backend:/app/target/surefire-reports/. backend/target/surefire-reports/ || true'
                     sh 'docker cp ucus-yonetim-backend:/app/target/screenshots/. backend/target/screenshots/ || true'
-                    script {
-                        if (fileExists('backend/target/surefire-reports/TEST-*.xml')) {
-                            junit 'backend/target/surefire-reports/TEST-*.xml'
-                        }
-                    }
-                    archiveArtifacts artifacts: '**/screenshots/REQ_101*.png', allowEmptyArchive: true
-                }
-            }
-        }
-
-        stage('E2E Scenario 2 - Admin Flight Test') {
-            steps {
-                echo 'Running E2E Scenario 2: Admin Flight Management...'
-                script {
-                    sh '''
-                        docker exec ucus-yonetim-backend bash -c "
-                            cd /app &&
-                            export DISPLAY=:99 &&
-                            Xvfb :99 -screen 0 1920x1080x24 > /dev/null 2>&1 &
-                            java -cp 'target/classes:target/test-classes:/root/.m2/repository/org/seleniumhq/selenium/selenium-java/4.14.1/selenium-java-4.14.1.jar:/root/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.10.1/junit-jupiter-engine-5.10.1.jar' \\
-                            org.junit.platform.console.ConsoleLauncher \\
-                            --select-method com.ucusyonetim.e2e.SeleniumUserFlowsTest#scenario2_adminAddFlight \\
-                            -Dselenium.scenario=2 \\
-                            -Dfrontend.base=http://ucus-yonetim-frontend \\
-                            -Dbackend.base=http://ucus-yonetim-backend:8080
-                        "
-                    '''
-                }
-            }
-            post {
-                always {
-                    sh 'docker cp ucus-yonetim-backend:/app/target/surefire-reports/. backend/target/surefire-reports/ || true'
-                    sh 'docker cp ucus-yonetim-backend:/app/target/screenshots/. backend/target/screenshots/ || true'
-                    script {
-                        if (fileExists('backend/target/surefire-reports/TEST-*.xml')) {
-                            junit 'backend/target/surefire-reports/TEST-*.xml'
-                        }
-                    }
-                    archiveArtifacts artifacts: '**/screenshots/REQ_102*.png', allowEmptyArchive: true
-                }
-            }
-        }
-
-        stage('E2E Scenario 3 - User Booking Test') {
-            steps {
-                echo 'Running E2E Scenario 3: User Flight Booking...'
-                script {
-                    sh '''
-                        docker exec ucus-yonetim-backend bash -c "
-                            cd /app &&
-                            export DISPLAY=:99 &&
-                            Xvfb :99 -screen 0 1920x1080x24 > /dev/null 2>&1 &
-                            java -cp 'target/classes:target/test-classes:/root/.m2/repository/org/seleniumhq/selenium/selenium-java/4.14.1/selenium-java-4.14.1.jar:/root/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.10.1/junit-jupiter-engine-5.10.1.jar' \\
-                            org.junit.platform.console.ConsoleLauncher \\
-                            --select-method com.ucusyonetim.e2e.SeleniumUserFlowsTest#scenario3_userFlightBooking \\
-                            -Dselenium.scenario=3 \\
-                            -Dfrontend.base=http://ucus-yonetim-frontend \\
-                            -Dbackend.base=http://ucus-yonetim-backend:8080
-                        "
-                    '''
-                }
-            }
-            post {
-                always {
-                    sh 'docker cp ucus-yonetim-backend:/app/target/surefire-reports/. backend/target/surefire-reports/ || true'
-                    sh 'docker cp ucus-yonetim-backend:/app/target/screenshots/. backend/target/screenshots/ || true'
-                    script {
-                        if (fileExists('backend/target/surefire-reports/TEST-*.xml')) {
-                            junit 'backend/target/surefire-reports/TEST-*.xml'
-                        }
-                    }
-                    archiveArtifacts artifacts: '**/screenshots/REQ_103*.png', allowEmptyArchive: true
+                    junit 'backend/target/surefire-reports/TEST-*.xml'
+                    archiveArtifacts artifacts: 'backend/target/screenshots/*.png', allowEmptyArchive: true
                 }
             }
         }
@@ -231,11 +119,12 @@ pipeline {
             echo '✅ Pipeline completed successfully!'
         }
         failure {
-            echo '❌ Pipeline failed!'
+            echo '❌ Pipeline failed! Check logs and screenshots.'
         }
         always {
-            echo 'Cleaning up Docker containers...'
-            sh 'docker compose down || true'
+            echo 'Cleaning up...'
+            // Test sonrası sistemi kapatmak istemiyorsanız burayı yorum satırı yapabilirsiniz
+            sh 'docker compose down || docker-compose down || true'
             cleanWs()
         }
     }

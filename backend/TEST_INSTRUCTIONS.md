@@ -1,4 +1,4 @@
-# Test Çalıştırma Talimatları
+ Test Çalıştırma Talimatları
 
 ## Birim Testleri Çalıştırma
 
