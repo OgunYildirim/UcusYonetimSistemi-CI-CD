@@ -85,26 +85,14 @@ pipeline {
             }
         }
 
-        stage('Deploy to Test Environment') {
-            steps {
-                echo 'Deploying to Test Environment...'
-                sh 'docker-compose down || true'
-                sh 'docker-compose up -d'
-            }
-        }
 
-        stage('E2E Tests - Selenium') {
+
+        stage('Deploy with Docker Compose') {
             steps {
-                echo 'Running Selenium E2E Tests...'
-                dir('backend') {
-                    sh 'mvn test -Dtest=SeleniumTestRunner -Dspring.profiles.active=test'
-                }
-            }
-            post {
-                always {
-                    junit 'backend/target/surefire-reports/*.xml'
-                    archiveArtifacts artifacts: '**/screenshots/*.png', allowEmptyArchive: true
-                }
+                echo 'Deploying with Docker Compose...'
+                sh 'docker compose up -d'
+                // Servislerin başlamasını bekle
+                sh 'sleep 60'
             }
         }
 
@@ -114,10 +102,74 @@ pipeline {
                 script {
                     sh '''
                         echo "Waiting for services to be ready..."
-                        sleep 30
-                        curl -f http://localhost:8080/actuator/health || exit 1
+                        # Backend health check
+                        for i in {1..30}; do
+                            if curl -f http://localhost:8080/actuator/health 2>/dev/null; then
+                                echo "Backend is healthy!"
+                                break
+                            fi
+                            echo "Attempt $i: Backend not ready yet, waiting..."
+                            sleep 10
+                        done
+
+                        # Frontend health check
+                        for i in {1..30}; do
+                            if curl -f http://localhost:3000 2>/dev/null; then
+                                echo "Frontend is healthy!"
+                                break
+                            fi
+                            echo "Attempt $i: Frontend not ready yet, waiting..."
+                            sleep 10
+                        done
+
                         echo "All services are healthy!"
                     '''
+                }
+            }
+        }
+
+        stage('E2E Scenario 1 - Selenium Login Test') {
+            steps {
+                echo 'Running E2E Scenario 1: User Login Flow...'
+                dir('backend') {
+                    // Selenium testini scenario=1 ile çalıştır
+                    sh 'mvn -B test -Dtest=SeleniumUserFlowsTest#scenario1_loginFlows -Dselenium.scenario=1 -Dfrontend.base=http://localhost:3000 -Dbackend.base=http://localhost:8080 -Dspring.profiles.active=test'
+                }
+            }
+            post {
+                always {
+                    junit 'backend/target/surefire-reports/TEST-*.xml'
+                    archiveArtifacts artifacts: '**/screenshots/*.png', allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('E2E Scenario 2 - Selenium Admin Flight Test') {
+            steps {
+                echo 'Running E2E Scenario 2: Admin Flight Management...'
+                dir('backend') {
+                    sh 'mvn -B test -Dtest=SeleniumUserFlowsTest#scenario2_adminAddFlight -Dselenium.scenario=2 -Dfrontend.base=http://localhost:3000 -Dbackend.base=http://localhost:8080 -Dspring.profiles.active=test'
+                }
+            }
+            post {
+                always {
+                    junit 'backend/target/surefire-reports/TEST-*.xml'
+                    archiveArtifacts artifacts: '**/screenshots/*.png', allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('E2E Scenario 3 - Selenium User Booking Test') {
+            steps {
+                echo 'Running E2E Scenario 3: User Flight Booking...'
+                dir('backend') {
+                    sh 'mvn -B test -Dtest=SeleniumUserFlowsTest#scenario3_userFlightBooking -Dselenium.scenario=3 -Dfrontend.base=http://localhost:3000 -Dbackend.base=http://localhost:8080 -Dspring.profiles.active=test'
+                }
+            }
+            post {
+                always {
+                    junit 'backend/target/surefire-reports/TEST-*.xml'
+                    archiveArtifacts artifacts: '**/screenshots/*.png', allowEmptyArchive: true
                 }
             }
         }
@@ -131,7 +183,8 @@ pipeline {
             echo '❌ Pipeline failed!'
         }
         always {
-            echo 'Cleaning up...'
+            echo 'Cleaning up Docker containers...'
+            sh 'docker compose down || true'
             cleanWs()
         }
     }
