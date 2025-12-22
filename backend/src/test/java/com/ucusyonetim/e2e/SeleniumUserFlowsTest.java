@@ -34,31 +34,38 @@ public class SeleniumUserFlowsTest {
 
     @BeforeEach
     void setUp() {
-        // Jenkins/Linux ortamı için otomatik kurulum
+        // Jenkins/Linux ortamı için otomatik kurulum (WebDriverManager doğru driver'ı seçer)
         WebDriverManager.chromedriver().setup();
 
         ChromeOptions options = new ChromeOptions();
-        // Alpine Linux Chromium browser kullanımı
-        options.setBinary("/usr/bin/chromium-browser");
+
+        // DÜZELTME: Sabit binary yolu kaldırıldı.
+        // Ubuntu/Jammy imajında Google Chrome zaten standart yoldadır, Selenium onu otomatik bulur.
+        // options.setBinary("/usr/bin/chromium-browser"); // BU SATIR SİLİNDİ
 
         // Docker container için optimal ayarlar
-        options.addArguments("--headless=new"); // Yeni headless modu
-        options.addArguments("--no-sandbox"); // Docker güvenlik
-        options.addArguments("--disable-dev-shm-usage"); // Bellek yönetimi
-        options.addArguments("--disable-gpu"); // GPU devre dışı
-        options.addArguments("--window-size=1920,1080"); // Pencere boyutu
-        options.addArguments("--remote-allow-origins=*"); // CORS ayarı
-        options.addArguments("--disable-web-security"); // Test için güvenlik devre dışı
-        options.addArguments("--ignore-certificate-errors"); // SSL sertifika hataları
-        options.addArguments("--disable-extensions"); // Eklentiler kapalı
-        options.addArguments("--disable-background-timer-throttling"); // Timer kısıtlamaları
-        options.addArguments("--disable-renderer-backgrounding"); // Renderer optimizasyonları
+        options.addArguments("--headless=new"); // Yeni headless modu (Arayüzsüz çalışma)
+        options.addArguments("--no-sandbox"); // Docker içinde root yetkisiyle çalışma güvenliği
+        options.addArguments("--disable-dev-shm-usage"); // /dev/shm bellek sorunlarını önler (Kritik!)
+        options.addArguments("--disable-gpu"); // GPU donanım hızlandırmayı kapatır
+        options.addArguments("--window-size=1920,1080"); // Ekran çözünürlüğü
+        options.addArguments("--remote-allow-origins=*"); // CORS/Bağlantı hatalarını önler
+
+        // Stabilite Arttırıcı Ek Ayarlar
+        options.addArguments("--disable-web-security");
+        options.addArguments("--ignore-certificate-errors");
+        options.addArguments("--disable-extensions");
+        options.addArguments("--disable-background-timer-throttling");
+        options.addArguments("--disable-renderer-backgrounding");
         options.addArguments("--disable-backgrounding-occluded-windows");
-        options.addArguments("--single-process"); // Alpine Docker için
-        options.addArguments("--disable-features=VizDisplayCompositor"); // Render iyileştirmesi
+
+        // Docker konteynerleri için ek render iyileştirmeleri
+        options.addArguments("--disable-features=VizDisplayCompositor");
 
         driver = new ChromeDriver(options);
-        wait = new WebDriverWait(driver, Duration.ofSeconds(30)); // Daha uzun timeout
+
+        // Dinamik bekleme süresi (Sayfalar yüklenirken hata almamak için)
+        wait = new WebDriverWait(driver, Duration.ofSeconds(30));
     }
 
     @AfterEach
