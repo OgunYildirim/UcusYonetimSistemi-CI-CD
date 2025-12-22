@@ -2,13 +2,9 @@ pipeline {
     agent any
     
     environment {
-        // Docker BuildKit ayarları
         DOCKER_BUILDKIT = '1'
         COMPOSE_DOCKER_CLI_BUILD = '1'
-        // C DİSKİNİ KURTARAN AYAR: Maven kütüphanelerini D diskine yönlendir
-        MAVEN_REPO_PATH = "D:/MavenRepo"
-        // Maven komutlarına eklenecek ortak parametre
-        MVN_OPTS = "-Dmaven.repo.local=${MAVEN_REPO_PATH}"
+        APP_URL = "http://localhost:8080"
     }
 
     stages {
@@ -23,8 +19,7 @@ pipeline {
         stage('2- Build Backend') {
             steps {
                 dir('backend') {
-                    // Maven yerel depoyu D diskinde tutar
-                    sh "mvn clean package -DskipTests ${MVN_OPTS}"
+                    sh 'mvn clean package -DskipTests'
                 }
             }
         }
@@ -33,7 +28,7 @@ pipeline {
         stage('3- Unit Tests') {
             steps {
                 dir('backend') {
-                    sh "mvn test -Dtest=*Test,!*IT,!*IntegrationTest,!SeleniumUserFlowsTest ${MVN_OPTS}"
+                    sh 'mvn test -Dtest=*Test,!*IT,!*IntegrationTest,!SeleniumUserFlowsTest'
                 }
             }
             post {
@@ -47,7 +42,7 @@ pipeline {
         stage('4- Integration Tests') {
             steps {
                 dir('backend') {
-                    sh "mvn test -Dtest=*IT,*IntegrationTest -Dsurefire.failIfNoSpecifiedTests=false ${MVN_OPTS}"
+                    sh 'mvn test -Dtest=*IT,*IntegrationTest -Dsurefire.failIfNoSpecifiedTests=false'
                 }
             }
             post {
@@ -63,27 +58,25 @@ pipeline {
                 script {
                     sh '''
                         export DOCKER_BUILDKIT=0
-                        # 400 HATASI COZUMU: -v ile eski veritabanı kayıtlarını (volume) tamamen sil
-                        docker-compose down -v --remove-orphans || true
+                        docker-compose down --remove-orphans || true
                         docker rm -f ucus-yonetim-db ucus-yonetim-backend ucus-yonetim-frontend || true
-                        
-                        # Cache kullanmadan tertemiz build
-                        docker-compose build --no-cache backend
+                        docker-compose build postgres backend frontend
                         docker-compose up -d postgres backend frontend
                     '''
-                    echo 'Sistemin ve veritabaninin hazir olmasi bekleniyor (60s)...'
-                    sleep 60
+                    echo 'Waiting for services to be ready (45s)...'
+                    sleep 45
                     sh 'docker ps'
                 }
             }
         }
 
-        // 6. ASAMA: Selenium E2E Senaryolari (55 Puan)
+        // 6. ASAMA: E2E Senaryolari (55 Puan)
+        // -w /app sayesinde Maven pom.xml dosyasini artik bulabilecektir.
+
         stage('6-1 Scenario: User Login Flow') {
             steps {
                 script {
                     echo 'Running Scenario 1: Login Flow...'
-                    // Konteyner içinde de m2 klasörünü sabit tutuyoruz
                     sh "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest#scenario1_loginFlows"
                 }
             }
@@ -111,17 +104,12 @@ pipeline {
     post {
         always {
             script {
-                // HATA ANALİZİ: Başarısız olursa logları bas ki 400 hatasının nedenini görelim
-                sh "docker logs ucus-yonetim-backend --tail 100 || true"
-                
                 // Test raporlarini konteynerden Jenkins'e cekiyoruz
                 sh "docker cp ucus-yonetim-backend:/app/target/surefire-reports/. backend/target/surefire-reports/ || true"
                 junit '**/target/surefire-reports/*.xml'
             }
-            echo 'Cleaning up resources and pruning docker...'
-            sh 'docker-compose down -v || true'
-            // Sahipsiz imajları silerek C diskinde yer açar
-            sh 'docker system prune -f || true'
+            echo 'Cleaning up resources...'
+            sh 'docker-compose down || true'
             cleanWs()
         }
         success {
