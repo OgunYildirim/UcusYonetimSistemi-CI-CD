@@ -71,11 +71,11 @@ pipeline {
                     sleep 45
 
                     // 3. ROLLERIN YUKLENMESI (Role is not found hatasi cozumu)
-                    // Paylastigin SQL dosyasinin backend/src/main/resources/import.sql yolunda oldugunu varsayiyoruz.
+                    // Paylastigin SQL dosyasinin backend/src/main/resources/data.sql yolunda oldugunu varsayiyoruz.
                     // Veritabani adinin 'flightdb' oldugunu varsayiyoruz (application.properties'den kontrol et).
                     echo 'Test verileri ve roller yukleniyor...'
-                    sh "docker cp backend/src/main/resources/import.sql ucus-yonetim-db:/import.sql"
-                    sh "docker exec ucus-yonetim-db psql -U postgres -d flightdb -f /import.sql"
+                    sh "docker cp backend/src/main/resources/data.sql ucus-yonetim-db:/data.sql"
+                    sh "docker exec ucus-yonetim-db psql -U postgres -d flightdb -f /data.sql"
 
                     echo 'Sistem tamamen hazir.'
                     sh 'docker ps'
