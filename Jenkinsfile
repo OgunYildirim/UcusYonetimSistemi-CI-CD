@@ -58,9 +58,9 @@ pipeline {
             steps {
                 script {
                     // BuildKit kapalı kalsın (Görüntüdeki hatayı önlemek için)
-                    sh 'export DOCKER_BUILDKIT=0 && docker compose build'
-                    sh 'docker compose down || true'
-                    sh 'docker compose up -d'
+                    sh 'export DOCKER_BUILDKIT=0 && docker-compose build'
+                    sh 'docker-compose down || true'
+                    sh 'docker-compose up -d'
 
                     echo 'Sistemin ayağa kalkması bekleniyor...'
                     sleep 30
@@ -108,7 +108,7 @@ pipeline {
             junit '**/target/surefire-reports/*.xml'
 
             echo 'Temizlik yapılıyor...'
-            sh 'docker compose down'
+            sh 'docker-compose down'
             cleanWs()
         }
         success {
