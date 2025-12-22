@@ -58,7 +58,8 @@ pipeline {
                 script {
                     sh '''
                         export DOCKER_BUILDKIT=0
-                        docker-compose down --remove-orphans || true
+                        # -v bayragi veritabani verilerini tamamen temizler (400 hatasi cozumu)
+                        docker-compose down -v --remove-orphans || true
                         docker rm -f ucus-yonetim-db ucus-yonetim-backend ucus-yonetim-frontend || true
                         docker-compose build postgres backend frontend
                         docker-compose up -d postgres backend frontend
@@ -71,8 +72,6 @@ pipeline {
         }
 
         // 6. ASAMA: E2E Senaryolari (55 Puan)
-        // -w /app sayesinde Maven pom.xml dosyasini artik bulabilecektir.
-
         stage('6-1 Scenario: User Login Flow') {
             steps {
                 script {
@@ -104,12 +103,16 @@ pipeline {
     post {
         always {
             script {
+                // Hata durumunda loglari gorerek analizi kolaylastiriyoruz
+                sh "docker logs ucus-yonetim-backend --tail 50 || true"
+
                 // Test raporlarini konteynerden Jenkins'e cekiyoruz
                 sh "docker cp ucus-yonetim-backend:/app/target/surefire-reports/. backend/target/surefire-reports/ || true"
                 junit '**/target/surefire-reports/*.xml'
             }
             echo 'Cleaning up resources...'
-            sh 'docker-compose down || true'
+            // Temizlik asamasinda da hacimleri temizlemek yer kazanmanizi saglar
+            sh 'docker-compose down -v || true'
             cleanWs()
         }
         success {
