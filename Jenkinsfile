@@ -58,28 +58,28 @@ pipeline {
                 script {
                     sh '''
                         export DOCKER_BUILDKIT=0
-                        # 1. Eski konteyner ve verileri (Volume) temizle
+                        # Her şeyi ve verileri (Volume) temizle
                         docker-compose down -v --remove-orphans || true
-                        docker rm -f ucus-yonetim-db ucus-yonetim-backend ucus-yonetim-frontend || true
-
-                        # 2. Konteynerleri insa et ve ayaga kaldir
+                        
+                        # Backend'i derle
                         docker-compose build backend
-                        docker-compose up -d postgres backend frontend
+                        
+                        # 1. ÖNCE POSTGRES'İ BAŞLAT (Tabloların oluşması için değil, SQL'in tanınması için)
+                        docker-compose up -d postgres
+                        
+                        # 2. SQL DOSYASINI DOCKER'IN ÖZEL BAŞLANGIÇ KLASÖRÜNE KOPYALA
+                        # Not: SQL dosyanın adının import.sql olduğunu varsayıyorum
+                        docker cp backend/src/main/resources/import.sql ucus-yonetim-db:/docker-entrypoint-initdb.d/setup.sql
+                        
+                        # 3. ŞİMDİ SİSTEMİ AYAĞA KALDIR
+                        docker-compose up -d backend frontend
                     '''
-
-                    echo 'Veritabani tablolarinin olusmasi bekleniyor (45s)...'
-                    sleep 45
-
-                    // 3. ROLLERIN YUKLENMESI (Role is not found hatasi cozumu)
-                    // Paylastigin SQL dosyasinin backend/src/main/resources/data.sql yolunda oldugunu varsayiyoruz.
-                    // Veritabani adinin 'flightdb' oldugunu varsayiyoruz (application.properties'den kontrol et).
-                    echo 'Test verileri ve roller yukleniyor...'
-                    sh "docker cp backend/src/main/resources/data.sql ucus-yonetim-db:/data.sql"
-                    // Jenkinsfile 5. Stage içindeki psql satırını şununla değiştir:
-                    sh "docker exec ucus-yonetim-db psql -U postgres -d postgres -f /data.sql"
-
-                    echo 'Sistem tamamen hazir.'
+                    
+                    echo 'Sistemin ve verilerin yüklenmesi bekleniyor (60s)...'
+                    sleep 60
                     sh 'docker ps'
+                    // Analiz için logları buraya basalım
+                    sh 'docker logs ucus-yonetim-db'
                 }
             }
         }
