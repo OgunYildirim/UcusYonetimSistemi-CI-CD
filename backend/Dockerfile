@@ -1,38 +1,53 @@
-# Build stage
+# 1. Aşama: Build Stage (Sadece JAR üretimi)
+# Chrome'u burada kurmuyoruz, çünkü bu stage sadece paketleme için.
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
 COPY pom.xml .
+# Bağımlılıkları önceden çekerek build süresini hızlandırıyoruz
+RUN mvn dependency:go-offline
 COPY src ./src
-
-# Chrome browser ve Selenium dependencies (GPG hatası giderilmiş güncel sürüm)
-RUN apt-get update && \
-    apt-get install -y wget gnupg2 curl --no-install-recommends && \
-    curl -fSsL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor | tee /usr/share/keyrings/google-chrome-keyring.gpg > /dev/null && \
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list && \
-    apt-get update && \
-    apt-get install -y google-chrome-stable xvfb dbus-x11 && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
 RUN mvn clean package -DskipTests
 
-# Run stage
-FROM eclipse-temurin:17-jre-alpine
+# 2. Aşama: Run Stage (Uygulamanın çalışacağı ve Selenium testlerinin koşacağı yer)
+# Ubuntu tabanlı (Jammy) imaj Selenium için en kararlı olanıdır.
+FROM eclipse-temurin:17-jre-jammy
 
-# Alpine için Chrome browser kurulumu
-RUN apk add --no-cache \
-    chromium \
-    chromium-chromedriver \
+USER root
+
+# Chrome ve Selenium için gerekli bağımlılıklar
+# apt-key yerine güncel 'signed-by' yöntemini kullanıyoruz (Hata almaman için kritik)
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg2 \
+    curl \
     xvfb \
-    dbus \
-    font-noto-emoji \
-    && rm -rf /var/cache/apk/*
+    dbus-x11 \
+    libgconf-2-4 \
+    libnss3 \
+    libxss1 \
+    libasound2 \
+    fonts-liberation \
+    libgbm1 \
+    --no-install-recommends && \
+    mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /etc/apt/keyrings/google-chrome.gpg && \
+    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list && \
+    apt-get update && \
+    apt-get install -y google-chrome-stable && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Chrome environment variables
-ENV CHROME_BIN=/usr/bin/chromium-browser
-ENV CHROME_PATH=/usr/lib/chromium/
+# Maven kurulumu (E2E testlerini docker exec ile konteyner içinde koşturabilmek için)
+RUN apt-get update && apt-get install -y maven && apt-get clean
+
+# Ortam Değişkenleri
+ENV CHROME_BIN=/usr/bin/google-chrome
 ENV DISPLAY=:99
 
 WORKDIR /app
+# Build aşamasında üretilen jar'ı kopyalıyoruz
 COPY --from=build /app/target/*.jar app.jar
+
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+
+# Xvfb sanal ekranını arka planda başlatıp uygulamayı çalıştıran komut
+ENTRYPOINT ["sh", "-c", "Xvfb :99 -screen 0 1280x1024x24 & java -jar app.jar"]
