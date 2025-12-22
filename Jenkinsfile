@@ -6,6 +6,10 @@ pipeline {
         COMPOSE_DOCKER_CLI_BUILD = '1'
     }
 
+    tools {
+        maven 'Maven'
+    }
+
     stages {
         // 1. ASAMA: Kodlarin GitHub'dan Cekilmesi (5 Puan)
         stage('1- Checkout SCM') {
