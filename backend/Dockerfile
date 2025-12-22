@@ -7,7 +7,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # 2. Aşama: Run Stage (Uygulamanın çalışacağı ve Selenium testlerinin koşacağı yer)
-FROM eclipse-temurin:17-jre-jammy
+FROM eclipse-temurin:17-jdk-jammy
 
 USER root
 
