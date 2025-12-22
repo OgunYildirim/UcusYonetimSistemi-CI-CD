@@ -36,7 +36,6 @@ public class SeleniumUserFlowsTest {
         WebDriverManager.chromedriver().setup();
         ChromeOptions options = new ChromeOptions();
 
-        // Docker ve Linux uyumluluk ayarlari
         options.addArguments("--headless=new");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
@@ -74,8 +73,7 @@ public class SeleniumUserFlowsTest {
     }
 
     /**
-     * Backend'deki RegisterRequest DTO'suna gore guncellenmis kayit metodu.
-     * Artik phoneNumber, firstName ve lastName alanlarini da iceriyor.
+     * Backend RegisterRequest DTO'suna tam uyumlu hale getirildi.
      */
     private void registerUser(String username, String email, String password) throws Exception {
         URL url = new URL(BACKEND_BASE + "/api/auth/register");
@@ -85,14 +83,9 @@ public class SeleniumUserFlowsTest {
         con.setRequestProperty("Accept", "application/json");
         con.setDoOutput(true);
 
-        // JSON yapisi RegisterRequest.java sınıfındaki @NotBlank alanlarina gore duzenlendi
+        // JSON içeriği RegisterRequest field isimleri ile birebir eşleşmeli
         String json = String.format(
-                "{\"username\":\"%s\"," +
-                        "\"email\":\"%s\"," +
-                        "\"password\":\"%s\"," +
-                        "\"firstName\":\"Test\"," +
-                        "\"lastName\":\"User\"," +
-                        "\"phoneNumber\":\"5551234567\"}",
+                "{\"username\":\"%s\",\"email\":\"%s\",\"password\":\"%s\",\"firstName\":\"Test\",\"lastName\":\"User\",\"phoneNumber\":\"05554443322\"}",
                 username, email, password
         );
 
@@ -103,7 +96,11 @@ public class SeleniumUserFlowsTest {
 
         int code = con.getResponseCode();
         if (code < 200 || code >= 300) {
-            throw new RuntimeException("API Kayıt Hatası! HTTP Kod: " + code + ". Lütfen backend loglarını kontrol edin.");
+            String errorMsg = "";
+            try (java.util.Scanner s = new java.util.Scanner(con.getErrorStream()).useDelimiter("\\A")) {
+                errorMsg = s.hasNext() ? s.next() : "";
+            }
+            throw new RuntimeException("API Kayit Hatasi! Kod: " + code + " Mesaj: " + errorMsg);
         }
     }
 
@@ -120,17 +117,20 @@ public class SeleniumUserFlowsTest {
     void scenario1_loginFlows() throws Exception {
         Assumptions.assumeTrue("1".equals(SELENIUM_SCENARIO));
 
-        // Username en az 3 karakter, password en az 6 karakter (Kurala uygun)
-        String uname = "user_" + System.currentTimeMillis();
-        registerUser(uname, uname + "@test.com", "password123");
+        // Kısıtlamalara uygun veriler (min 3 char username, min 6 char password)
+        String uname = "user" + (System.currentTimeMillis() % 100000);
+        String upass = "Password123";
+
+        registerUser(uname, uname + "@test.com", upass);
 
         driver.get(FRONTEND_BASE + "/login");
 
         WebElement uInput = wait.until(ExpectedConditions.elementToBeClickable(By.name("username")));
         uInput.sendKeys(uname);
-        driver.findElement(By.name("password")).sendKeys("password123");
+        driver.findElement(By.name("password")).sendKeys(upass);
         driver.findElement(By.cssSelector("button[type='submit']")).click();
 
+        // Login basarili ise token olusmali
         wait.until(ExpectedConditions.or(
                 ExpectedConditions.urlContains("/flights"),
                 ExpectedConditions.jsReturnsValue("return localStorage.getItem('token')")
@@ -152,7 +152,8 @@ public class SeleniumUserFlowsTest {
                 By.xpath("//button[contains(text(), 'Yeni Uçuş Ekle')]")));
         addBtn.click();
 
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.name("flightNumber"))).sendKeys("E2E-" + System.currentTimeMillis());
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.name("flightNumber")))
+                .sendKeys("E2E-" + System.currentTimeMillis());
 
         new Select(driver.findElement(By.name("departureAirportId"))).selectByIndex(1);
         new Select(driver.findElement(By.name("arrivalAirportId"))).selectByIndex(2);
@@ -165,7 +166,7 @@ public class SeleniumUserFlowsTest {
         driver.findElement(By.cssSelector("button[type='submit']")).click();
 
         Alert alert = wait.until(ExpectedConditions.alertIsPresent());
-        assertTrue(alert.getText().toLowerCase().contains("başarı") || alert.getText().toLowerCase().contains("success"));
+        assertTrue(alert.getText().toLowerCase().contains("basari") || alert.getText().toLowerCase().contains("success"));
         alert.accept();
     }
 }
