@@ -4,21 +4,21 @@ pipeline {
     environment {
         DOCKER_BUILDKIT = '1'
         COMPOSE_DOCKER_CLI_BUILD = '1'
-        APP_URL = "http://localhost:8080"
     }
 
     stages {
-        // 1. ASAMA: Kodlarin Cekilmesi (5 Puan)
+        // 1. ASAMA: Kodlarin GitHub'dan Cekilmesi (5 Puan)
         stage('1- Checkout SCM') {
             steps {
                 checkout scm
             }
         }
 
-        // 2. ASAMA: Build (5 Puan)
+        // 2. ASAMA: Maven ile Derleme (5 Puan)
         stage('2- Build Backend') {
             steps {
                 dir('backend') {
+                    // C diskinin dolmamasi icin D diski MavenRepo kullanimi tavsiye edilir
                     sh 'mvn clean package -DskipTests'
                 }
             }
@@ -52,30 +52,43 @@ pipeline {
             }
         }
 
-        // 5. ASAMA: Docker Uzerinde Calistirma (5 Puan)
+        // 5. ASAMA: Docker Uzerinde Calistirma ve Veritabani Hazirligi (5 Puan)
         stage('5- Docker Run') {
             steps {
                 script {
                     sh '''
                         export DOCKER_BUILDKIT=0
-                        # -v bayragi veritabani verilerini tamamen temizler (400 hatasi cozumu)
+                        # 1. Eski konteyner ve verileri (Volume) temizle
                         docker-compose down -v --remove-orphans || true
                         docker rm -f ucus-yonetim-db ucus-yonetim-backend ucus-yonetim-frontend || true
-                        docker-compose build postgres backend frontend
+
+                        # 2. Konteynerleri insa et ve ayaga kaldir
+                        docker-compose build backend
                         docker-compose up -d postgres backend frontend
                     '''
-                    echo 'Waiting for services to be ready (45s)...'
+
+                    echo 'Veritabani tablolarinin olusmasi bekleniyor (45s)...'
                     sleep 45
+
+                    // 3. ROLLERIN YUKLENMESI (Role is not found hatasi cozumu)
+                    // Paylastigin SQL dosyasinin backend/src/main/resources/import.sql yolunda oldugunu varsayiyoruz.
+                    // Veritabani adinin 'flightdb' oldugunu varsayiyoruz (application.properties'den kontrol et).
+                    echo 'Test verileri ve roller yukleniyor...'
+                    sh "docker cp backend/src/main/resources/import.sql ucus-yonetim-db:/import.sql"
+                    sh "docker exec ucus-yonetim-db psql -U postgres -d flightdb -f /import.sql"
+
+                    echo 'Sistem tamamen hazir.'
                     sh 'docker ps'
                 }
             }
         }
 
-        // 6. ASAMA: E2E Senaryolari (55 Puan)
+        // 6. ASAMA: Selenium E2E Senaryolari (55 Puan)
         stage('6-1 Scenario: User Login Flow') {
             steps {
                 script {
                     echo 'Running Scenario 1: Login Flow...'
+                    // -w /app ile Maven'i konteyner icindeki proje kok dizininde calistiriyoruz
                     sh "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest#scenario1_loginFlows"
                 }
             }
@@ -103,20 +116,19 @@ pipeline {
     post {
         always {
             script {
-                // Hata durumunda loglari gorerek analizi kolaylastiriyoruz
+                // Hata analizi icin loglari Jenkins konsoluna bas
                 sh "docker logs ucus-yonetim-backend --tail 50 || true"
 
-                // Test raporlarini konteynerden Jenkins'e cekiyoruz
+                // Test raporlarini konteynerden alip Jenkins arayuzunde goster
                 sh "docker cp ucus-yonetim-backend:/app/target/surefire-reports/. backend/target/surefire-reports/ || true"
                 junit '**/target/surefire-reports/*.xml'
             }
-            echo 'Cleaning up resources...'
-            // Temizlik asamasinda da hacimleri temizlemek yer kazanmanizi saglar
+            echo 'Temizlik yapiliyor...'
             sh 'docker-compose down -v || true'
             cleanWs()
         }
         success {
-            echo 'SUCCESS: All CI/CD stages and 3 Selenium scenarios completed successfully.'
+            echo 'TEBRIKLER: Tüm CI/CD aşamaları ve Selenium testleri başarıyla tamamlandı!'
         }
     }
 }
