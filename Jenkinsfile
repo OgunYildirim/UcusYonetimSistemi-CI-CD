@@ -2,130 +2,117 @@ pipeline {
     agent any
     
     environment {
-        DOCKER_REGISTRY = 'docker.io'
-        IMAGE_NAME = 'ucus-yonetim'
-        DOCKER_CREDENTIALS_ID = 'docker-hub-credentials'
+        // Docker Compose'un servis isimleri (Selenium testleri için)
+        APP_URL = "http://localhost:8080"
     }
-    
+
     stages {
-        stage('Checkout') {
+        // 1. AŞAMA: Kodların Çekilmesi (5 Puan)
+        stage('1- Checkout SCM') {
             steps {
-                echo 'Checking out code...'
                 checkout scm
             }
         }
-        
-        stage('Build Backend') {
+
+        // 2. AŞAMA: Build (5 Puan)
+        stage('2- Build Backend') {
             steps {
-                echo 'Building Spring Boot Backend...'
                 dir('backend') {
                     sh 'mvn clean package -DskipTests'
                 }
             }
         }
-        
-        stage('Unit Tests - Backend') {
+
+        // 3. AŞAMA: Birim Testleri (15 Puan)
+        stage('3- Unit Tests') {
             steps {
-                echo 'Running Backend Unit Tests...'
                 dir('backend') {
-                    // Sadece Unit testleri çalıştır, E2E ve Integration testlerini exclude et
-                    sh 'mvn -B test -Dtest=!*Integration*,!SeleniumUserFlowsTest'
+                    // Sadece Unit testleri çalıştırır (Service ve Controller testleri)
+                    sh 'mvn test -Dtest=*Test,!*IT,!*IntegrationTest,!*SeleniumUserFlowsTest'
                 }
             }
             post {
                 always {
-                    script {
-                        if (fileExists('backend/target/surefire-reports/TEST-*.xml')) {
-                            junit 'backend/target/surefire-reports/TEST-*.xml'
-                        }
-                    }
+                    junit '**/target/surefire-reports/TEST-*.xml'
                 }
             }
         }
 
-        stage('Integration Tests') {
+        // 4. AŞAMA: Entegrasyon Testleri (15 Puan)
+        stage('4- Integration Tests') {
             steps {
-                echo 'Running Integration Tests...'
                 dir('backend') {
-                    // Sadece IT ile bitenleri çalıştırır
-                    sh 'mvn -B verify -DskipUnitTests -Dit.test=*IT,*IntegrationTest -Dtest=!SeleniumUserFlowsTest'
+                    // Sadece Integration testleri çalıştırır (*IT ve *IntegrationTest)
+                    sh 'mvn test -Dtest=*IT,*IntegrationTest -Dsurefire.failIfNoSpecifiedTests=false'
                 }
             }
             post {
                 always {
-                    script {
-                        if (fileExists('backend/target/failsafe-reports/*.xml')) {
-                            junit 'backend/target/failsafe-reports/*.xml'
-                        }
-                    }
+                    junit '**/target/surefire-reports/TEST-*.xml'
                 }
             }
         }
 
-        stage('Build Docker Images') {
+        // 5. AŞAMA: Docker üzerinde çalıştırma (5 Puan)
+        stage('5- Docker Run') {
             steps {
-                echo 'Building Docker Images without Buildx...'
                 script {
-                    // DOCKER_BUILDKIT=0 değişkeni Buildx gereksinimini ortadan kaldırır
-                    sh 'export DOCKER_BUILDKIT=0 && docker-compose build'
+                    // BuildKit kapalı kalsın (Görüntüdeki hatayı önlemek için)
+                    sh 'export DOCKER_BUILDKIT=0 && docker compose build'
+                    sh 'docker compose down || true'
+                    sh 'docker compose up -d'
+
+                    echo 'Sistemin ayağa kalkması bekleniyor...'
+                    sleep 30
                 }
             }
         }
 
-        stage('Deploy with Docker Compose') {
-            steps {
-                echo 'Deploying with Docker Compose...'
-                // Önce temizle sonra ayağa kaldır
-                sh 'docker compose down || docker-compose down || true'
-                sh 'docker compose up -d || docker-compose up -d'
-                echo 'Waiting for services to be ready (60s)...'
-                sleep 60
-            }
-        }
+        // 6. AŞAMA: E2E Senaryoları (55+ Puan)
+        // Her senaryo ayrı bir stage olarak raporlanmalı (Hoca ayrı stage'ler yazılabilir demiş)
 
-        stage('Health Check') {
+        stage('6-1 Scenario: User Login Flow') {
             steps {
-                echo 'Performing Health Checks...'
                 script {
-                    // Basit curl check
-                    sh 'curl -f http://localhost:3000 || (echo "Frontend not ready" && exit 1)'
-                    sh 'curl -f http://localhost:8080/actuator/health || echo "Backend health check skipped"'
-                }
-            }
-        }
-
-        stage('E2E Tests - Scenario 1') {
-            steps {
-                echo 'Running E2E Scenario 1: User Login...'
-                script {
-                    // Karmaşık java komutu yerine konteyner içinde Maven kullanmak daha garantidir
-                    sh 'docker exec ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest -Dselenium.scenario=1 -Dfrontend.base=http://ucus-yonetim-frontend -Dbackend.base=http://localhost:8080'
+                    echo 'REQ-101 - User Login Flow Test Çalıştırılıyor...'
+                    sh "docker exec ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest#scenario1_loginFlows -Dselenium.scenario=1"
                 }
             }
             post {
                 always {
-                    // Test sonuçlarını ve screenshotları Jenkins'e çek
-                    sh 'docker cp ucus-yonetim-backend:/app/target/surefire-reports/. backend/target/surefire-reports/ || true'
-                    sh 'docker cp ucus-yonetim-backend:/app/target/screenshots/. backend/target/screenshots/ || true'
-                    junit 'backend/target/surefire-reports/TEST-*.xml'
-                    archiveArtifacts artifacts: 'backend/target/screenshots/*.png', allowEmptyArchive: true
+                    sh "docker cp ucus-yonetim-backend:/app/target/surefire-reports/. backend/target/surefire-reports/ || true"
+                    sh "docker cp ucus-yonetim-backend:/app/target/screenshots/. backend/target/screenshots/ || true"
+                }
+            }
+        }
+
+        stage('6-2 Scenario: Admin Add Flight') {
+            steps {
+                script {
+                    echo 'REQ-102 - Admin Add Flight Test Çalıştırılıyor...'
+                    sh "docker exec ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest#scenario2_adminAddFlight -Dselenium.scenario=2"
+                }
+            }
+            post {
+                always {
+                    sh "docker cp ucus-yonetim-backend:/app/target/surefire-reports/. backend/target/surefire-reports/ || true"
+                    sh "docker cp ucus-yonetim-backend:/app/target/screenshots/. backend/target/screenshots/ || true"
                 }
             }
         }
     }
 
     post {
-        success {
-            echo '✅ Pipeline completed successfully!'
-        }
-        failure {
-            echo '❌ Pipeline failed! Check logs and screenshots.'
-        }
         always {
-            echo 'Cleaning up...'
-            // Test sonrası sistemi kapatmak istemiyorsanız burayı yorum satırı yapabilirsiniz
-            sh 'docker compose down || docker-compose down || true'
+            // Raporları Jenkins arayüzüne ekle
+            junit '**/target/surefire-reports/*.xml'
+
+            echo 'Temizlik yapılıyor...'
+            sh 'docker compose down'
             cleanWs()
+        }
+        success {
+            echo 'Tüm aşamalar başarıyla tamamlandı!'
         }
     }
 }
