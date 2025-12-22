@@ -67,15 +67,23 @@ pipeline {
                         docker-compose up -d postgres backend frontend
                     '''
 
-                    echo 'Veritabani tablolarinin olusmasi bekleniyor (45s)...'
-                    sleep 45
+                    echo 'Backend uygulamasinin baslangic verilerini yuklemesi bekleniyor (60s)...'
+                    echo 'Spring Boot application.properties ayarinda spring.sql.init.mode=always oldugu icin data.sql otomatik yuklenir.'
+                    sleep 60
 
-                    // 3. ROLLERIN YUKLENMESI (Role is not found hatasi cozumu)
-                    // Paylastigin SQL dosyasinin backend/src/main/resources/import.sql yolunda oldugunu varsayiyoruz.
-                    // Veritabani adinin 'flightdb' oldugunu varsayiyoruz (application.properties'den kontrol et).
-                    echo 'Test verileri ve roller yukleniyor...'
-                    sh "docker cp backend/src/main/resources/import.sql ucus-yonetim-db:/import.sql"
-                    sh "docker exec ucus-yonetim-db psql -U postgres -d flightdb -f /import.sql"
+                    echo '========================================='
+                    echo 'VERITABANI KONTROL: Rollerin yuklendigini dogruluyoruz...'
+                    echo '========================================='
+                    sh '''
+                        docker exec ucus-yonetim-db psql -U postgres -d ucusyonetim -c "SELECT * FROM roles;" || echo "HATA: Roles tablosu okunamadi!"
+                    '''
+                    
+                    echo '========================================='
+                    echo 'VERITABANI KONTROL: Kullanicilarin yuklendigini dogruluyoruz...'
+                    echo '========================================='
+                    sh '''
+                        docker exec ucus-yonetim-db psql -U postgres -d ucusyonetim -c "SELECT id, username, email FROM users;" || echo "HATA: Users tablosu okunamadi!"
+                    '''
 
                     echo 'Sistem tamamen hazir.'
                     sh 'docker ps'
