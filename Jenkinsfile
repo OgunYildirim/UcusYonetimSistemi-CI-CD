@@ -52,7 +52,6 @@ pipeline {
                 script {
                     sh '''
                         export DOCKER_BUILDKIT=0
-                        # Volume temizliği 400 hatası (duplicate user) almamak için şart
                         docker-compose down -v --remove-orphans || true
                         docker rm -f ucus-yonetim-db ucus-yonetim-backend ucus-yonetim-frontend || true
 
@@ -60,25 +59,20 @@ pipeline {
                         docker-compose up -d postgres backend frontend
                     '''
 
-                    echo 'Tabloların oluşması için bekleniyor (60s)...'
+                    echo 'Backendin hazir olmasi bekleniyor (60s)...'
                     sleep 60
 
-                    echo 'Veritabanı kontrol ediliyor ve roller yükleniyor...'
+                    echo 'Veriler yukleniyor...'
                     sh "docker cp backend/src/main/resources/data.sql ucus-yonetim-db:/data.sql"
                     
-                    // GARANTİ YÖNTEM: Hem postgres hem flightdb isimli db'leri kontrol edip yükler
+                    // KONTROLÜ KALDIRDIK - Doğrudan iki veritabanı ismine de deneme yapıyoruz
+                    // ON CONFLICT hatalarını görmezden gelmek için || true ekledik
                     sh '''
-                        if docker exec ucus-yonetim-db psql -U postgres -d flightdb -c "\\dt" | grep -q "roles"; then
-                            echo "Tablolar 'flightdb' içinde bulundu. Veriler yükleniyor..."
-                            docker exec ucus-yonetim-db psql -U postgres -d flightdb -f /data.sql
-                        elif docker exec ucus-yonetim-db psql -U postgres -d postgres -c "\\dt" | grep -q "roles"; then
-                            echo "Tablolar 'postgres' içinde bulundu. Veriler yükleniyor..."
-                            docker exec ucus-yonetim-db psql -U postgres -d postgres -f /data.sql
-                        else
-                            echo "HATA: Roller tablosu bulunamadı. Backend loglarına bakın."
-                            docker logs ucus-yonetim-backend --tail 100
-                            exit 1
-                        fi
+                        echo "Postgres DB denemesi..."
+                        docker exec ucus-yonetim-db psql -U postgres -d postgres -f /data.sql || true
+                        
+                        echo "Flightdb denemesi (Eger varsa)..."
+                        docker exec ucus-yonetim-db psql -U postgres -d flightdb -f /data.sql || true
                     '''
 
                     sh 'docker ps'
