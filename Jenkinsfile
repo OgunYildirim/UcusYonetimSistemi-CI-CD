@@ -75,7 +75,8 @@ pipeline {
                     // Veritabani adinin 'flightdb' oldugunu varsayiyoruz (application.properties'den kontrol et).
                     echo 'Test verileri ve roller yukleniyor...'
                     sh "docker cp backend/src/main/resources/data.sql ucus-yonetim-db:/data.sql"
-                    sh "docker exec ucus-yonetim-db psql -U postgres -d flightdb -f /data.sql"
+                    // Jenkinsfile 5. Stage içindeki psql satırını şununla değiştir:
+                    sh "docker exec ucus-yonetim-db psql -U postgres -d postgres -f /import.sql"
 
                     echo 'Sistem tamamen hazir.'
                     sh 'docker ps'
