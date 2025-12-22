@@ -2,21 +2,20 @@ pipeline {
     agent any
     
     environment {
-        // BuildKit hatasını ve Docker Compose versiyon farklarını giderir
         DOCKER_BUILDKIT = '1'
         COMPOSE_DOCKER_CLI_BUILD = '1'
         APP_URL = "http://localhost:8080"
     }
 
     stages {
-        // 1. AŞAMA: Kodların Çekilmesi (5 Puan)
+        // 1. ASAMA: Kodlarin Cekilmesi (5 Puan)
         stage('1- Checkout SCM') {
             steps {
                 checkout scm
             }
         }
 
-        // 2. AŞAMA: Build (5 Puan)
+        // 2. ASAMA: Build (5 Puan)
         stage('2- Build Backend') {
             steps {
                 dir('backend') {
@@ -25,7 +24,7 @@ pipeline {
             }
         }
 
-        // 3. AŞAMA: Birim Testleri (15 Puan)
+        // 3. ASAMA: Birim Testleri (15 Puan)
         stage('3- Unit Tests') {
             steps {
                 dir('backend') {
@@ -39,7 +38,7 @@ pipeline {
             }
         }
 
-        // 4. AŞAMA: Entegrasyon Testleri (15 Puan)
+        // 4. ASAMA: Entegrasyon Testleri (15 Puan)
         stage('4- Integration Tests') {
             steps {
                 dir('backend') {
@@ -53,29 +52,32 @@ pipeline {
             }
         }
 
-        // 5. AŞAMA: Docker üzerinde çalıştırma (5 Puan)
+        // 5. ASAMA: Docker Uzerinde Calistirma (5 Puan)
         stage('5- Docker Run') {
             steps {
                 script {
-                    // Sistemindeki komuta göre docker-compose veya docker compose otomatik denenir
-                    sh 'docker-compose build --pull || docker compose build --pull'
-                    sh 'docker-compose down || docker compose down || true'
-                    sh 'docker-compose up -d || docker compose up -d'
-
-                    echo 'Sistemin ayağa kalkması bekleniyor (30s)...'
-                    sleep 30
+                    sh '''
+                        export DOCKER_BUILDKIT=0
+                        docker-compose down --remove-orphans || true
+                        docker rm -f ucus-yonetim-db ucus-yonetim-backend ucus-yonetim-frontend || true
+                        docker-compose build postgres backend frontend
+                        docker-compose up -d postgres backend frontend
+                    '''
+                    echo 'Waiting for services to be ready (45s)...'
+                    sleep 45
+                    sh 'docker ps'
                 }
             }
         }
 
-        // 6. AŞAMA: E2E Senaryoları (55 Puan)
-        // ÖNEMLİ: Hoca en az 3 senaryo istediği için 3 ayrı stage yapıldı.
+        // 6. ASAMA: E2E Senaryolari (55 Puan)
+        // -w /app sayesinde Maven pom.xml dosyasini artik bulabilecektir.
 
         stage('6-1 Scenario: User Login Flow') {
             steps {
                 script {
-                    echo 'Senaryo 1: Login testi başlatılıyor...'
-                    sh "docker exec -T ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest#scenario1_loginFlows"
+                    echo 'Running Scenario 1: Login Flow...'
+                    sh "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest#scenario1_loginFlows"
                 }
             }
         }
@@ -83,8 +85,8 @@ pipeline {
         stage('6-2 Scenario: Flight Search') {
             steps {
                 script {
-                    echo 'Senaryo 2: Uçuş arama testi başlatılıyor...'
-                    sh "docker exec -T ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest#scenario2_searchFlight"
+                    echo 'Running Scenario 2: Flight Search...'
+                    sh "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest#scenario2_searchFlight"
                 }
             }
         }
@@ -92,8 +94,8 @@ pipeline {
         stage('6-3 Scenario: Booking Process') {
             steps {
                 script {
-                    echo 'Senaryo 3: Rezervasyon testi başlatılıyor...'
-                    sh "docker exec -T ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest#scenario3_booking"
+                    echo 'Running Scenario 3: Booking Process...'
+                    sh "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest#scenario3_booking"
                 }
             }
         }
@@ -102,16 +104,16 @@ pipeline {
     post {
         always {
             script {
-                // Test raporlarını konteynerden Jenkins'e kopyala
+                // Test raporlarini konteynerden Jenkins'e cekiyoruz
                 sh "docker cp ucus-yonetim-backend:/app/target/surefire-reports/. backend/target/surefire-reports/ || true"
                 junit '**/target/surefire-reports/*.xml'
             }
-            echo 'Temizlik yapılıyor...'
-            sh 'docker-compose down || docker compose down || true'
+            echo 'Cleaning up resources...'
+            sh 'docker-compose down || true'
             cleanWs()
         }
         success {
-            echo '✅ Tebrikler! Tüm CI/CD aşamaları ve 3 E2E senaryosu başarıyla tamamlandı.'
+            echo 'SUCCESS: All CI/CD stages and 3 Selenium scenarios completed successfully.'
         }
     }
 }

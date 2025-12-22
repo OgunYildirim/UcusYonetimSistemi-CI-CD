@@ -1,21 +1,17 @@
 # 1. Aşama: Build Stage (Sadece JAR üretimi)
-# Chrome'u burada kurmuyoruz, çünkü bu stage sadece paketleme için.
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
 COPY pom.xml .
-# Bağımlılıkları önceden çekerek build süresini hızlandırıyoruz
 RUN mvn dependency:go-offline
 COPY src ./src
 RUN mvn clean package -DskipTests
 
 # 2. Aşama: Run Stage (Uygulamanın çalışacağı ve Selenium testlerinin koşacağı yer)
-# Ubuntu tabanlı (Jammy) imaj Selenium için en kararlı olanıdır.
 FROM eclipse-temurin:17-jre-jammy
 
 USER root
 
 # Chrome ve Selenium için gerekli bağımlılıklar
-# apt-key yerine güncel 'signed-by' yöntemini kullanıyoruz (Hata almaman için kritik)
 RUN apt-get update && apt-get install -y \
     wget \
     gnupg2 \
@@ -36,7 +32,7 @@ RUN apt-get update && apt-get install -y \
     apt-get install -y google-chrome-stable && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Maven kurulumu (E2E testlerini docker exec ile konteyner içinde koşturabilmek için)
+# Maven kurulumu (Konteyner içinde test koşabilmek için)
 RUN apt-get update && apt-get install -y maven && apt-get clean
 
 # Ortam Değişkenleri
@@ -44,7 +40,10 @@ ENV CHROME_BIN=/usr/bin/google-chrome
 ENV DISPLAY=:99
 
 WORKDIR /app
-# Build aşamasında üretilen jar'ı kopyalıyoruz
+
+# --- KRİTİK EKLEME: Maven'ın projeyi tanıması için kaynak kodları kopyalıyoruz ---
+COPY --from=build /app/pom.xml .
+COPY --from=build /app/src ./src
 COPY --from=build /app/target/*.jar app.jar
 
 EXPOSE 8080
