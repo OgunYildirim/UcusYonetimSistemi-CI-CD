@@ -19,7 +19,7 @@ pipeline {
             steps {
                 dir('backend') {
                     // C diskinin dolmamasi icin D diski MavenRepo kullanimi tavsiye edilir
-                    sh 'mvn clean package -DskipTests'
+                    bat 'mvn clean package -DskipTests'
                 }
             }
         }
@@ -28,7 +28,7 @@ pipeline {
         stage('3- Unit Tests') {
             steps {
                 dir('backend') {
-                    sh 'mvn test -Dtest=*Test,!*IT,!*IntegrationTest,!SeleniumUserFlowsTest'
+                    bat 'mvn test -Dtest=*Test,!*IT,!*IntegrationTest,!SeleniumUserFlowsTest'
                 }
             }
             post {
@@ -42,7 +42,7 @@ pipeline {
         stage('4- Integration Tests') {
             steps {
                 dir('backend') {
-                    sh 'mvn test -Dtest=*IT,*IntegrationTest -Dsurefire.failIfNoSpecifiedTests=false'
+                    bat 'mvn test -Dtest=*IT,*IntegrationTest -Dsurefire.failIfNoSpecifiedTests=false'
                 }
             }
             post {
@@ -56,13 +56,15 @@ pipeline {
         stage('5- Docker Run') {
             steps {
                 script {
-                    sh '''
-                        export DOCKER_BUILDKIT=0
-                        # 1. Eski konteyner ve verileri (Volume) temizle
-                        docker-compose down -v --remove-orphans || true
-                        docker rm -f ucus-yonetim-db ucus-yonetim-backend ucus-yonetim-frontend || true
+                    bat '''
+                        set DOCKER_BUILDKIT=0
+                        REM 1. Sadece uygulama konteynerlerini temizle (Jenkins'i DOKUNMA!)
+                        docker-compose stop postgres backend frontend
+                        docker-compose rm -f postgres backend frontend
+                        docker volume rm ucusyonetimtest_postgres_data
+                        docker rm -f ucus-yonetim-db ucus-yonetim-backend ucus-yonetim-frontend
 
-                        # 2. Konteynerleri insa et ve ayaga kaldir
+                        REM 2. Konteynerleri insa et ve ayaga kaldir
                         docker-compose build backend
                         docker-compose up -d postgres backend frontend
                     '''
@@ -74,19 +76,15 @@ pipeline {
                     echo '========================================='
                     echo 'VERITABANI KONTROL: Rollerin yuklendigini dogruluyoruz...'
                     echo '========================================='
-                    sh '''
-                        docker exec ucus-yonetim-db psql -U postgres -d ucusyonetim -c "SELECT * FROM roles;" || echo "HATA: Roles tablosu okunamadi!"
-                    '''
+                    bat 'docker exec ucus-yonetim-db psql -U postgres -d ucusyonetim -c "SELECT * FROM roles;"'
                     
                     echo '========================================='
                     echo 'VERITABANI KONTROL: Kullanicilarin yuklendigini dogruluyoruz...'
                     echo '========================================='
-                    sh '''
-                        docker exec ucus-yonetim-db psql -U postgres -d ucusyonetim -c "SELECT id, username, email FROM users;" || echo "HATA: Users tablosu okunamadi!"
-                    '''
+                    bat 'docker exec ucus-yonetim-db psql -U postgres -d ucusyonetim -c "SELECT id, username, email FROM users;"'
 
                     echo 'Sistem tamamen hazir.'
-                    sh 'docker ps'
+                    bat 'docker ps'
                 }
             }
         }
@@ -97,7 +95,7 @@ pipeline {
                 script {
                     echo 'Running Scenario 1: Login Flow...'
                     // -w /app ile Maven'i konteyner icindeki proje kok dizininde calistiriyoruz
-                    sh "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest#scenario1_loginFlows"
+                    bat "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest#scenario1_loginFlows"
                 }
             }
         }
@@ -106,7 +104,7 @@ pipeline {
             steps {
                 script {
                     echo 'Running Scenario 2: Flight Search...'
-                    sh "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest#scenario2_searchFlight"
+                    bat "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest#scenario2_searchFlight"
                 }
             }
         }
@@ -115,7 +113,7 @@ pipeline {
             steps {
                 script {
                     echo 'Running Scenario 3: Booking Process...'
-                    sh "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest#scenario3_booking"
+                    bat "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest#scenario3_booking"
                 }
             }
         }
@@ -125,14 +123,14 @@ pipeline {
         always {
             script {
                 // Hata analizi icin loglari Jenkins konsoluna bas
-                sh "docker logs ucus-yonetim-backend --tail 50 || true"
+                bat "docker logs ucus-yonetim-backend --tail 50"
 
                 // Test raporlarini konteynerden alip Jenkins arayuzunde goster
-                sh "docker cp ucus-yonetim-backend:/app/target/surefire-reports/. backend/target/surefire-reports/ || true"
+                bat "docker cp ucus-yonetim-backend:/app/target/surefire-reports/. backend/target/surefire-reports/"
                 junit '**/target/surefire-reports/*.xml'
             }
             echo 'Temizlik yapiliyor...'
-            sh 'docker-compose down -v || true'
+            bat 'docker-compose down -v'
             cleanWs()
         }
         success {
