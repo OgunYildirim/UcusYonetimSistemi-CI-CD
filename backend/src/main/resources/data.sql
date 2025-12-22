@@ -1,7 +1,7 @@
 -- ============================================
 -- 1. ROLLER (Backend'in beklediği tam isimler)
 -- ============================================
-INSERT INTO roles (name, description) VALUES 
+INSERT INTO roles (name, description) VALUES
 ('ROLE_USER', 'Standard user role'),
 ('ROLE_ADMIN', 'Administrator role with full access'),
 ('ROLE_STAFF', 'Staff member with limited admin access')
