@@ -34,7 +34,8 @@ public class SeleniumUserFlowsTest {
     @BeforeEach
     void setUp() {
         try {
-            // Bağlantı sorunlarına karşı timeout süresini düşürüyoruz ve önbelleği zorluyoruz
+            // Bağlantı sorunlarına karşı timeout süresini düşürüyoruz ve önbelleği
+            // zorluyoruz
             WebDriverManager.chromedriver()
                     .timeout(30)
                     .useLocalVersionsPropertiesFirst()
@@ -45,11 +46,19 @@ public class SeleniumUserFlowsTest {
 
         ChromeOptions options = new ChromeOptions();
 
-        // Docker ve CI/CD ortamları için kritik ayarlar
-        options.addArguments("--headless=new");
-        options.addArguments("--no-sandbox");
-        options.addArguments("--disable-dev-shm-usage");
-        options.addArguments("--disable-gpu");
+        // HEADLESS_MODE=false ile görünür browser'da çalıştırabilirsiniz
+        boolean headless = !"false".equalsIgnoreCase(System.getProperty("HEADLESS_MODE", "true"));
+
+        if (headless) {
+            // Docker ve CI/CD ortamları için kritik ayarlar
+            options.addArguments("--headless=new");
+            options.addArguments("--no-sandbox");
+            options.addArguments("--disable-dev-shm-usage");
+            options.addArguments("--disable-gpu");
+        } else {
+            System.out.println("🎬 BROWSER MODE: Test görünür browser'da çalışıyor!");
+        }
+
         options.addArguments("--window-size=1920,1080");
         options.addArguments("--remote-allow-origins=*");
 
@@ -76,13 +85,15 @@ public class SeleniumUserFlowsTest {
 
     private void takeScreenshot(String name) {
         try {
-            if (!(driver instanceof TakesScreenshot)) return;
+            if (!(driver instanceof TakesScreenshot))
+                return;
             Path targetDir = Path.of("target", "screenshots");
             Files.createDirectories(targetDir);
             byte[] screenshot = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
             String fileName = name.replaceAll("[^a-zA-Z0-9]", "_") + "_" + System.currentTimeMillis() + ".png";
             Files.write(targetDir.resolve(fileName), screenshot);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
     }
 
     private void registerUser(String username, String email, String password) throws Exception {
@@ -96,8 +107,7 @@ public class SeleniumUserFlowsTest {
         // RegisterRequest DTO ile tam uyumlu JSON
         String json = String.format(
                 "{\"username\":\"%s\",\"email\":\"%s\",\"password\":\"%s\",\"firstName\":\"Test\",\"lastName\":\"User\",\"phoneNumber\":\"05554443322\"}",
-                username, email, password
-        );
+                username, email, password);
 
         try (OutputStream os = con.getOutputStream()) {
             byte[] input = json.getBytes(StandardCharsets.UTF_8);
@@ -107,7 +117,8 @@ public class SeleniumUserFlowsTest {
         int code = con.getResponseCode();
         if (code < 200 || code >= 300) {
             String errorMsg = "";
-            try (Scanner s = new Scanner(con.getErrorStream() != null ? con.getErrorStream() : con.getInputStream()).useDelimiter("\\A")) {
+            try (Scanner s = new Scanner(con.getErrorStream() != null ? con.getErrorStream() : con.getInputStream())
+                    .useDelimiter("\\A")) {
                 errorMsg = s.hasNext() ? s.next() : "";
             }
             throw new RuntimeException("API Kayit Hatasi! Kod: " + code + " Mesaj: " + errorMsg);
@@ -119,8 +130,7 @@ public class SeleniumUserFlowsTest {
         String userJson = "{\"id\":1,\"username\":\"admin\",\"email\":\"admin@flightmanagement.com\",\"roles\":[\"ROLE_ADMIN\"]}";
         ((JavascriptExecutor) driver).executeScript(
                 "localStorage.setItem('user', JSON.stringify(" + userJson + ")); " +
-                        "localStorage.setItem('token', 'mock-jwt-token-admin');"
-        );
+                        "localStorage.setItem('token', 'mock-jwt-token-admin');");
     }
 
     @Test
@@ -143,8 +153,7 @@ public class SeleniumUserFlowsTest {
         // Login sonrası yönlendirme veya token kontrolü
         wait.until(ExpectedConditions.or(
                 ExpectedConditions.urlContains("/flights"),
-                driver -> ((JavascriptExecutor) driver).executeScript("return localStorage.getItem('token')") != null
-        ));
+                driver -> ((JavascriptExecutor) driver).executeScript("return localStorage.getItem('token')") != null));
 
         Object token = ((JavascriptExecutor) driver).executeScript("return localStorage.getItem('token')");
         assertNotNull(token, "Login sonrasi token bulunamadi!");
@@ -170,7 +179,8 @@ public class SeleniumUserFlowsTest {
                 .sendKeys("E2E-" + System.currentTimeMillis());
 
         // Select objeleri için dropdownların yüklendiğinden emin olun
-        wait.until(ExpectedConditions.presenceOfNestedElementsLocatedBy(By.name("departureAirportId"), By.tagName("option")));
+        wait.until(ExpectedConditions.presenceOfNestedElementsLocatedBy(By.name("departureAirportId"),
+                By.tagName("option")));
         new Select(driver.findElement(By.name("departureAirportId"))).selectByIndex(1);
         new Select(driver.findElement(By.name("arrivalAirportId"))).selectByIndex(2);
         new Select(driver.findElement(By.name("aircraftId"))).selectByIndex(1);
@@ -188,7 +198,8 @@ public class SeleniumUserFlowsTest {
             assertTrue(text.contains("basari") || text.contains("success"), "Beklenen basari mesaji alinmadi: " + text);
             alert.accept();
         } catch (TimeoutException e) {
-            // Eğer alert değil de bir toast message/div çıkıyorsa buraya o kontrol eklenmeli
+            // Eğer alert değil de bir toast message/div çıkıyorsa buraya o kontrol
+            // eklenmeli
             System.out.println("Alert cikmadi, UI uzerindeki basari mesajini kontrol edin.");
         }
     }
