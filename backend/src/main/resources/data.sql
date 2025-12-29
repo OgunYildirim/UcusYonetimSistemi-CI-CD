@@ -42,9 +42,9 @@ ON CONFLICT DO NOTHING;
 -- ============================================
 -- 5. UÇAKLAR
 -- ============================================
-INSERT INTO aircrafts (registration_number, model, manufacturer, total_seats, economy_seats, business_seats, active) VALUES
-('TC-JRO', 'Boeing 737-800', 'Boeing', 180, 162, 18, true),
-('TC-JRE', 'Airbus A320', 'Airbus', 174, 156, 18, true)
+INSERT INTO aircrafts (registration_number, model, manufacturer, total_seats, economy_seats, business_seats, active, under_maintenance) VALUES
+('TC-JRO', 'Boeing 737-800', 'Boeing', 180, 162, 18, true, false),
+('TC-JRE', 'Airbus A320', 'Airbus', 174, 156, 18, true, false)
 ON CONFLICT DO NOTHING;
 
 -- ============================================
