@@ -42,9 +42,9 @@ ON CONFLICT DO NOTHING;
 -- ============================================
 -- 5. UÇAKLAR
 -- ============================================
-INSERT INTO aircrafts (registration_number, model, manufacturer, total_seats, economy_seats, business_seats, active, under_maintenance) VALUES
-('TC-JRO', 'Boeing 737-800', 'Boeing', 180, 162, 18, true, false),
-('TC-JRE', 'Airbus A320', 'Airbus', 174, 156, 18, true, false)
+INSERT INTO aircrafts (registration_number, model, manufacturer, total_seats, economy_seats, business_seats, active, under_maintenance, year_of_manufacture) VALUES
+('TC-JRO', 'Boeing 737-800', 'Boeing', 180, 162, 18, true, false, 2015),
+('TC-JRE', 'Airbus A320', 'Airbus', 174, 156, 18, true, false, 2018)
 ON CONFLICT DO NOTHING;
 
 -- ============================================
@@ -60,15 +60,15 @@ ON CONFLICT DO NOTHING;
 -- ============================================
 -- 7. UÇUŞLAR (Bugünden itibaren 1-3 gün sonrası için)
 -- ============================================
-INSERT INTO flights (flight_number, departure_airport_id, arrival_airport_id, aircraft_id, departure_time, arrival_time, available_seats, status) VALUES
-('TK001', 1, 2, 1, CURRENT_TIMESTAMP + INTERVAL '1 day', CURRENT_TIMESTAMP + INTERVAL '1 day 2 hours', 180, 'SCHEDULED'),
-('TK002', 2, 3, 2, CURRENT_TIMESTAMP + INTERVAL '2 day', CURRENT_TIMESTAMP + INTERVAL '2 day 1 hours', 174, 'SCHEDULED')
+INSERT INTO flights (flight_number, departure_airport_id, arrival_airport_id, aircraft_id, departure_time, arrival_time, available_seats, available_economy_seats, available_business_seats, status) VALUES
+('TK001', 1, 2, 1, CURRENT_TIMESTAMP + INTERVAL '1 day', CURRENT_TIMESTAMP + INTERVAL '1 day 2 hours', 180, 162, 18, 'SCHEDULED'),
+('TK002', 2, 3, 2, CURRENT_TIMESTAMP + INTERVAL '2 day', CURRENT_TIMESTAMP + INTERVAL '2 day 1 hours', 174, 156, 18, 'SCHEDULED')
 ON CONFLICT DO NOTHING;
 
 -- ============================================
 -- 8. FİYATLANDIRMA
 -- ============================================
-INSERT INTO flight_pricing (flight_id, economy_price, business_price, baggage_price_per_kg, free_baggage_kg, active) VALUES
-(1, 500.00, 1500.00, 10.00, 20, true),
-(2, 600.00, 1800.00, 12.00, 20, true)
+INSERT INTO flight_pricing (flight_id, economy_price, business_price, baggage_price_per_kg, free_baggage_kg, effective_from, active) VALUES
+(1, 500.00, 1500.00, 10.00, 20, CURRENT_TIMESTAMP, true),
+(2, 600.00, 1800.00, 12.00, 20, CURRENT_TIMESTAMP, true)
 ON CONFLICT DO NOTHING;
