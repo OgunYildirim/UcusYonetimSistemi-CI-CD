@@ -56,38 +56,36 @@ pipeline {
             }
         }
 
-        // 5. ASAMA: Docker Uzerinde Calistirma ve Veritabani Hazirligi (5 Puan)
+        // 5. ASAMA: Docker Uzerinde Calistirma (5 Puan)
         stage('5- Docker Run') {
             steps {
                 script {
                     bat '''
                         set DOCKER_BUILDKIT=0
                         REM 1. Sadece uygulama konteynerlerini temizle (Jenkins'i DOKUNMA!)
-                        docker-compose stop postgres backend frontend
-                        docker-compose rm -f postgres backend frontend
-                        docker volume rm ucusyonetimtest_postgres_data
-                        docker rm -f ucus-yonetim-db ucus-yonetim-backend ucus-yonetim-frontend
+                        docker-compose stop backend frontend
+                        docker-compose rm -f backend frontend
+                        docker rm -f ucus-yonetim-backend ucus-yonetim-frontend
 
                         REM 2. Konteynerleri insa et ve ayaga kaldir
                         docker-compose build backend
-                        docker-compose up -d postgres backend frontend
+                        docker-compose up -d backend frontend
                     '''
 
-                    echo 'Backend uygulamasinin baslangic verilerini yuklemesi bekleniyor (60s)...'
-                    echo 'Spring Boot application.properties ayarinda spring.sql.init.mode=always oldugu icin data.sql otomatik yuklenir.'
-                    sleep 60
-
-                    echo '========================================='
-                    echo 'VERITABANI KONTROL: Rollerin yuklendigini dogruluyoruz...'
-                    echo '========================================='
-                    bat 'docker exec ucus-yonetim-db psql -U postgres -d ucusyonetim -c "SELECT * FROM roles;"'
+                    echo 'Backend uygulamasinin hazir olmasini bekliyoruz...'
+                    echo 'H2 in-memory database kullanildiginda data.sql otomatik yuklenir.'
                     
-                    echo '========================================='
-                    echo 'VERITABANI KONTROL: Kullanicilarin yuklendigini dogruluyoruz...'
-                    echo '========================================='
-                    bat 'docker exec ucus-yonetim-db psql -U postgres -d ucusyonetim -c "SELECT id, username, email FROM users;"'
+                    // Backend'in hazir olmasini bekle (max 2 dakika)
+                    timeout(time: 2, unit: 'MINUTES') {
+                        waitUntil {
+                            script {
+                                def result = bat(script: 'docker logs ucus-yonetim-backend 2>&1 | findstr "Started FlightManagementApplication"', returnStatus: true)
+                                return result == 0
+                            }
+                        }
+                    }
 
-                    echo 'Sistem tamamen hazir.'
+                    echo 'Backend basariyla basladi!'
                     bat 'docker ps'
                 }
             }

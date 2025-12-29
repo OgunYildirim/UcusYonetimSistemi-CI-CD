@@ -1,40 +1,18 @@
 
 
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: ucus-yonetim-db
-    environment:
-      POSTGRES_DB: ucusyonetim
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - ucus-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: ucus-yonetim-backend
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ucusyonetim
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_DATASOURCE_URL: jdbc:h2:mem:flight_management_db
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD: 
+      SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
     ports:
       - "8081:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       - ucus-network
     healthcheck:
@@ -73,7 +51,6 @@ services:
       - ucus-network
 
 volumes:
-  postgres_data:
   jenkins_home:
 
 networks:
