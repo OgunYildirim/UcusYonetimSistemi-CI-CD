@@ -4,6 +4,8 @@ pipeline {
     environment {
         DOCKER_BUILDKIT = '1'
         COMPOSE_DOCKER_CLI_BUILD = '1'
+        // Maven D: diskini kullansın (C: diski dolmasın)
+        MAVEN_OPTS = '-Dmaven.repo.local=D:\\.m2\\repository -Djava.io.tmpdir=D:\\temp'
     }
 
     tools {
