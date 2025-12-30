@@ -131,7 +131,4 @@ Swagger UI: `http://localhost:8080/swagger-ui.html`
 - Password encryption (BCrypt)
 - CORS yapılandırması
 
-## 📧 İletişim
 
-Proje Sahibi: [İsim]
-Email: [Email]
