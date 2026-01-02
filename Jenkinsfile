@@ -34,7 +34,7 @@ pipeline {
         stage('3- Unit Tests') {
             steps {
                 dir('backend') {
-                    bat 'mvn test -Dtest=*Test,!*IT,!*IntegrationTest,!SeleniumUserFlowsTest'
+                    bat 'mvn test -Dtest=*Test,!*IT,!*IntegrationTest,!SeleniumUserFlowsTest,!SeleniumBasicFlowsTest'
                 }
             }
             post {
