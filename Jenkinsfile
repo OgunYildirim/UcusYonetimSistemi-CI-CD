@@ -94,30 +94,94 @@ pipeline {
         }
 
         // 6. ASAMA: Selenium E2E Senaryolari (55 Puan)
-        stage('6-1 Scenario: User Login Flow') {
+        stage('6-1 Senaryo: Kullanıcı Giriş Akışı') {
             steps {
                 script {
-                    echo 'Running Scenario 1: Login Flow...'
+                    echo 'Senaryo 1 Çalıştırılıyor: Kullanıcı Giriş Akışı...'
                     // -w /app ile Maven'i konteyner icindeki proje kok dizininde calistiriyoruz
                     bat "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest#scenario1_loginFlows"
                 }
             }
         }
 
-        stage('6-2 Scenario: Flight Search') {
+        stage('6-2 Senaryo: Uçuş Arama') {
             steps {
                 script {
-                    echo 'Running Scenario 2: Flight Search...'
+                    echo 'Senaryo 2 Çalıştırılıyor: Uçuş Arama...'
                     bat "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest#scenario2_searchFlight"
                 }
             }
         }
 
-        stage('6-3 Scenario: Booking Process') {
+        stage('6-3 Senaryo: Rezervasyon Süreci') {
             steps {
                 script {
-                    echo 'Running Scenario 3: Booking Process...'
+                    echo 'Senaryo 3 Çalıştırılıyor: Rezervasyon Süreci...'
                     bat "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumUserFlowsTest#scenario3_booking"
+                }
+            }
+        }
+
+        // 7 TEMEL E2E TEST SENARYOLARI (Stage 6'dan Farklı)
+        stage('7-1 Temel Senaryo: Havaalanı Listeleme') {
+            steps {
+                script {
+                    echo 'Temel Senaryo 1 Çalıştırılıyor: Havaalanı Listeleme...'
+                    bat "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumBasicFlowsTest#scenario1_listAirports -Dselenium.scenario=1"
+                }
+            }
+        }
+
+        stage('7-2 Temel Senaryo: Tüm Uçuşları Listeleme') {
+            steps {
+                script {
+                    echo 'Temel Senaryo 2 Çalıştırılıyor: Tüm Uçuşları Listeleme...'
+                    bat "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumBasicFlowsTest#scenario2_listAllFlights -Dselenium.scenario=2"
+                }
+            }
+        }
+
+        stage('7-3 Temel Senaryo: Uçuş Detay Görüntüleme') {
+            steps {
+                script {
+                    echo 'Temel Senaryo 3 Çalıştırılıyor: Uçuş Detay Görüntüleme...'
+                    bat "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumBasicFlowsTest#scenario3_viewFlightDetails -Dselenium.scenario=3"
+                }
+            }
+        }
+
+        stage('7-4 Temel Senaryo: Uçuş Arama') {
+            steps {
+                script {
+                    echo 'Temel Senaryo 4 Çalıştırılıyor: Uçuş Arama...'
+                    bat "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumBasicFlowsTest#scenario4_searchFlights -Dselenium.scenario=4"
+                }
+            }
+        }
+
+        stage('7-5 Temel Senaryo: Admin Uçak Ekleme') {
+            steps {
+                script {
+                    echo 'Temel Senaryo 5 Çalıştırılıyor: Admin Uçak Ekleme...'
+                    bat "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumBasicFlowsTest#scenario5_adminAddAircraft -Dselenium.scenario=5"
+                }
+            }
+        }
+
+        stage('7-6 Temel Senaryo: Admin Havaalanı Ekleme') {
+            steps {
+                script {
+                    echo 'Temel Senaryo 6 Çalıştırılıyor: Admin Havaalanı Ekleme...'
+                    bat "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumBasicFlowsTest#scenario6_adminAddAirport -Dselenium.scenario=6"
+                }
+            }
+        }
+
+        stage('7-7 Temel Senaryo: Admin Bakım Kaydı Ekleme') {
+            steps {
+                script {
+                    echo 'Temel Senaryo 7 Çalıştırılıyor: Admin Bakım Kaydı Ekleme...'
+                    bat "docker exec -w /app ucus-yonetim-backend mvn test -Dtest=SeleniumBasicFlowsTest#scenario7_adminAddMaintenance -Dselenium.scenario=7"
                 }
             }
         }
