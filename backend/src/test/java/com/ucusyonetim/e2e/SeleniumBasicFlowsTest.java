@@ -29,7 +29,8 @@ public class SeleniumBasicFlowsTest {
 
     private static final String SELENIUM_SCENARIO = System.getProperty("selenium.scenario", "1");
     private static final String FRONTEND_BASE = System.getProperty("frontend.base", "http://ucus-yonetim-frontend");
-    private static final String BACKEND_BASE = System.getProperty("backend.base", "http://ucus-yonetim-backend:8080");
+    // Test konteyner içinde çalıştığında localhost:8080 kullanılmalı
+    private static final String BACKEND_BASE = System.getProperty("backend.base", "http://localhost:8080");
 
     @BeforeEach
     void setUp() {
