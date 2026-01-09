@@ -143,7 +143,7 @@ Adım Adım Uygulanacak İşlemler:
 2. LocalStorage'a admin bilgilerini kaydet
 3. Admin paneline git
 4. "Havalimanları" sekmesine tıkla
-5. "Yeni Havalimanı Ekle" butonuna tıkla
+5. "Yeni Havalimanı Ekle" butonuasna tıkla
 6. Form alanlarını doldur:
    - Kod: TST{timestamp}
    - İsim: Test Havaalanı
