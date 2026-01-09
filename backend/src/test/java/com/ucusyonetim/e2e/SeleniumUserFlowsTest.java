@@ -29,8 +29,10 @@ public class SeleniumUserFlowsTest {
 
     private static final String SELENIUM_SCENARIO = System.getProperty("selenium.scenario", "1");
     private static final String FRONTEND_BASE = System.getProperty("frontend.base", "http://ucus-yonetim-frontend");
-    // Test konteyner içinde çalıştığında localhost:8080 kullanılmalı
-    private static final String BACKEND_BASE = System.getProperty("backend.base", "http://localhost:8080");
+    // Docker container içinde çalışırken backend container adını kullan
+    // Jenkins pipeline'dan -Dbackend.base=http://ucus-yonetim-backend:8080 ile
+    // override edilebilir
+    private static final String BACKEND_BASE = System.getProperty("backend.base", "http://ucus-yonetim-backend:8080");
 
     @BeforeEach
     void setUp() {
