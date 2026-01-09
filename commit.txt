@@ -138,7 +138,7 @@ Test Durumu Kimliği: REQ-004
 - Admin yetkisine sahip kullanıcı girişi yapılmış
 - Admin paneli erişilebilir
 
-Adım sadsadxdasdasAdım Uygulanacak İşlemler:
+Adım sadsadxdasdassdasdasdAdım Uygulanacak İşlemler:
 1. Ana sayfaya git
 2. LocalStorage'a admin bilgilerini kaydet
 3. Admin paneline git
