@@ -1,5 +1,322 @@
-Commit Deneme
-==============
+================================================================================
+                    UÇUŞ YÖNETİM SİSTEMİ TEST RAPORU
+================================================================================
+
+PROJE BİLGİLERİ
+---------------
+Backend: Spring Boot + Maven
+Frontend: React + NPM
+Test Tipi: E2E (End-to-End) Testler
+Test Framework: Selenium WebDriver + JUnit 5
 
 
-zxcxzcxzcdfsfasd
+================================================================================
+                           TEST DAĞILIMI
+================================================================================
+
+📊 TEST TİPLERİ:
+- E2E (End-to-End) Testler: 7 Adet
+- Toplam Test Sayısı: 7
+
+
+================================================================================
+                       DETAYLI TEST DURUMLARI
+================================================================================
+
+
+TEST-001: Ana Sayfa Görüntüleme
+================================================================================
+Test Durumu Kimliği: REQ-001
+
+İlgili Gereksinimler:
+- Kullanıcı ana sayfayı görüntüleyebilmeli
+- Sayfa başlığı yüklenmeli
+
+Ön Koşullar:
+- Frontend uygulaması çalışır durumda (http://ucus-yonetim-frontend)
+- Chrome tarayıcı kurulu
+- WebDriver yapılandırılmış
+
+Adım Adım Uygulanacak İşlemler:
+1. Chrome tarayıcıyı başlat
+2. Ana sayfaya git (/)
+3. Sayfa yüklenene kadar bekle
+4. Sayfa başlığını kontrol et
+
+Beklenen Sonuç:
+- Ana sayfa başarıyla yüklenir
+- Sayfa başlığı null değildir
+- Body elementi sayfa üzerinde bulunur
+
+Son Koşullar / Beklenen Sistem Durumu:
+- Ekran görüntüsü alınır
+- Tarayıcı kapatılır
+- Test başarılı mesajı görüntülenir
+
+
+TEST-002: Uçuş Listeleme Sayfası
+================================================================================
+Test Durumu Kimliği: REQ-002
+
+İlgili Gereksinimler:
+- Kullanıcı tüm uçuşları listeleyebilmeli
+- /flights sayfası erişilebilir olmalı
+
+Ön Koşullar:
+- Frontend uygulaması çalışır durumda
+- Backend API çalışır durumda
+
+Adım Adım Uygulanacak İşlemler:
+1. Chrome tarayıcıyı başlat
+2. /flights sayfasına git
+3. H1 başlığı yüklenene kadar bekle
+4. URL'nin /flights içerdiğini doğrula
+
+Beklenen Sonuç:
+- Uçuş listesi sayfası başarıyla yüklenir
+- URL'de "/flights" yolu bulunur
+- Sayfa içeriği görüntülenir
+
+Son Koşullar / Beklenen Sistem Durumu:
+- Ekran görüntüsü alınır
+- Test başarılı mesajı görüntülenir
+
+
+TEST-003: Admin - Yeni Uçak Ekleme
+================================================================================
+Test Durumu Kimliği: REQ-003
+
+İlgili Gereksinimler:
+- Admin kullanıcısı yeni uçak ekleyebilmeli
+- Uçak kayıt numarası, model, üretici bilgileri girilmeli
+- Koltuk kapasiteleri belirtilmeli
+
+Ön Koşullar:
+- Admin yetkisine sahip kullanıcı girişi yapılmış
+- Admin paneli erişilebilir (/admin)
+- LocalStorage'da admin token mevcut
+
+Adım Adım Uygulanacak İşlemler:
+1. Ana sayfaya git
+2. LocalStorage'a admin bilgilerini kaydet
+3. Sayfayı yenile
+4. Admin paneline git (/admin)
+5. "Uçaklar" sekmesine tıkla
+6. "Yeni Uçak Ekle" butonuna tıkla
+7. Form alanlarını doldur:
+   - Kayıt Numarası: TC-{timestamp}
+   - Model: Boeing 737
+   - Üretici: Boeing
+   - Toplam Koltuk: 180
+   - Ekonomi Koltuk: 150
+   - Business Koltuk: 30
+   - Üretim Yılı: 2020
+8. Submit butonuna tıkla
+9. Alert mesajını kabul et
+
+Beklenen Sonuç:
+- Form başarıyla doldurulur
+- Uçak sisteme eklenir
+- Başarı alert'i görüntülenir
+- Alert metni "başarı" veya "eklendi" içerir
+
+Son Koşullar / Beklenen Sistem Durumu:
+- Yeni uçak veritabanına kaydedilir
+- Uçak listesinde görünür hale gelir
+- Ekran görüntüsü alınır
+
+
+TEST-004: Admin - Yeni Havaalanı Ekleme
+================================================================================
+Test Durumu Kimliği: REQ-004
+
+İlgili Gereksinimler:
+- Admin kullanıcısı yeni havaalanı ekleyebilmeli
+- Havaalanı kodu, isim, şehir ve ülke bilgileri girilmeli
+
+Ön Koşullar:
+- Admin yetkisine sahip kullanıcı girişi yapılmış
+- Admin paneli erişilebilir
+
+Adım Adım Uygulanacak İşlemler:
+1. Ana sayfaya git
+2. LocalStorage'a admin bilgilerini kaydet
+3. Admin paneline git
+4. "Havalimanları" sekmesine tıkla
+5. "Yeni Havalimanı Ekle" butonuna tıkla
+6. Form alanlarını doldur:
+   - Kod: TST{timestamp}
+   - İsim: Test Havaalanı
+   - Şehir: Test Şehir
+   - Ülke: Türkiye
+7. Submit butonuna tıkla
+8. Alert mesajını kabul et
+
+Beklenen Sonuç:
+- Havaalanı başarıyla eklenir
+- Başarı alert'i görüntülenir
+- Alert metni "başarı" veya "eklendi" içerir
+
+Son Koşullar / Beklenen Sistem Durumu:
+- Yeni havaalanı veritabanına kaydedilir
+- Havaalanı listesinde görünür
+- Ekran görüntüsü alınır
+
+
+TEST-005: Admin - Uçak Bakıma Alma
+================================================================================
+Test Durumu Kimliği: REQ-005
+
+İlgili Gereksinimler:
+- Admin kullanıcısı uçağı bakıma alabilmeli
+- Bakım durumu değiştirilebilmeli
+
+Ön Koşullar:
+- Admin yetkisine sahip kullanıcı girişi yapılmış
+- Sistemde en az bir aktif uçak mevcut
+- Uçak bakımda değil
+
+Adım Adım Uygulanacak İşlemler:
+1. Admin paneline git
+2. "Uçaklar" sekmesine tıkla
+3. "Bakıma Al" butonuna tıkla
+4. Alert mesajını kabul et
+
+Beklenen Sonuç:
+- Uçak bakım durumuna geçer
+- Başarı alert'i görüntülenir
+- Uçak artık rezervasyon için kullanılamaz
+
+Son Koşullar / Beklenen Sistem Durumu:
+- Uçağın bakım durumu veritabanında güncellenir
+- Uçak listesinde bakımda olarak işaretlenir
+- Eğer bakıma alınabilecek uçak yoksa uyarı mesajı gösterilir
+
+
+TEST-006: Kullanıcı Kaydı
+================================================================================
+Test Durumu Kimliği: REQ-006
+
+İlgili Gereksinimler:
+- Yeni kullanıcı sisteme kayıt olabilmeli
+- Tüm zorunlu alanlar doldurulmalı
+- Başarılı kayıt sonrası login sayfasına yönlendirme yapılmalı
+
+Ön Koşullar:
+- Backend API çalışır durumda
+- /register sayfası erişilebilir
+
+Adım Adım Uygulanacak İşlemler:
+1. Kayıt sayfasına git (/register)
+2. Form alanlarını doldur:
+   - Kullanıcı Adı: user{timestamp}
+   - E-posta: user{timestamp}@test.com
+   - Şifre: Test123
+   - Ad: Test
+   - Soyad: User
+   - Telefon: 05551234567
+3. Submit butonuna tıkla
+4. Yönlendirme veya başarı mesajı bekle
+
+Beklenen Sonuç:
+- Kullanıcı başarıyla kaydedilir
+- Login sayfasına yönlendirme yapılır veya başarı mesajı görüntülenir
+- Kullanıcı bilgileri veritabanına kaydedilir
+
+Son Koşullar / Beklenen Sistem Durumu:
+- Yeni kullanıcı veritabanında oluşturulur
+- Kullanıcı login yapabilir duruma gelir
+- Ekran görüntüsü alınır
+
+
+TEST-007: Rezervasyonlarım Sayfası
+================================================================================
+Test Durumu Kimliği: REQ-007
+
+İlgili Gereksinimler:
+- Kullanıcı kendi rezervasyonlarını görüntüleyebilmeli
+- Giriş yapılmış kullanıcı için erişilebilir olmalı
+
+Ön Koşullar:
+- Sistemde kayıtlı bir kullanıcı mevcut
+- Kullanıcı giriş yapmış
+- LocalStorage'da token bulunuyor
+
+Adım Adım Uygulanacak İşlemler:
+1. Yeni kullanıcı kaydı oluştur (API üzerinden)
+2. Login sayfasına git
+3. Kullanıcı adı ve şifre ile giriş yap
+4. Token'ın LocalStorage'a kaydedilmesini bekle
+5. Rezervasyonlarım sayfasına git (/my-bookings)
+6. Sayfa içeriğinin yüklenmesini bekle
+
+Beklenen Sonuç:
+- Login başarılı olur
+- Token LocalStorage'a kaydedilir
+- Rezervasyonlarım sayfası başarıyla yüklenir
+- H1 başlığı görüntülenir
+
+Son Koşullar / Beklenen Sistem Durumu:
+- Kullanıcı rezervasyonlarını görüntüleyebilir
+- Sayfa yetkili kullanıcı için erişilebilir
+- Ekran görüntüsü alınır
+
+
+================================================================================
+                          TEST ORTAMI AYARLARI
+================================================================================
+
+Konfigürasyon Parametreleri:
+- Frontend Base URL: http://ucus-yonetim-frontend
+- Backend Base URL: http://ucus-yonetim-backend:8080
+- Tarayıcı: Chrome (Headless Mode)
+- Pencere Boyutu: 1920x1080
+- Varsayılan Bekleme Süresi: 30 saniye
+- WebDriver: ChromeDriver (Auto-managed)
+
+Chrome Opsiyonları:
+- Headless mode aktif
+- No sandbox
+- Disable dev shm usage
+- Disable GPU
+- Remote allow origins
+- Disable web security
+- Ignore certificate errors
+
+Ekran Görüntüleri:
+- Konum: target/screenshots/
+- Format: PNG
+- Adlandırma: {TestAdı}_{Timestamp}.png
+
+
+================================================================================
+                          TEST SONUÇLARI
+================================================================================
+
+Her test çalıştırıldıktan sonra:
+✅ Başarılı testler konsola mesaj yazdırır
+⚠️ Uyarı durumları loglanır
+❌ Başarısız testler exception fırlatır
+📸 Her test sonunda ekran görüntüsü alınır
+
+
+================================================================================
+                          NOTLAR VE DİKKAT EDİLECEKLER
+================================================================================
+
+1. Testler tekli olarak çalıştırılabilir (selenium.scenario parametresi)
+2. Headless mode kapatılabilir (HEADLESS_MODE=false)
+3. Admin testleri mock token kullanır
+4. Kullanıcı kayıt testleri gerçek API çağrısı yapar
+5. Her test izole çalışır (BeforeEach/AfterEach)
+6. Timestamp kullanılarak benzersiz veriler oluşturulur
+7. Alert mesajları otomatik kabul edilir
+8. WebDriverManager otomatik driver yönetimi sağlar
+
+
+================================================================================
+                             RAPOR SONU
+================================================================================
+Rapor Tarihi: {CURRENT_DATE}
+Hazırlayan: Test Otomasyon Sistemi
+Versiyon: 1.0
