@@ -77,8 +77,8 @@ pipeline {
                     echo 'Backend uygulamasinin hazir olmasini bekliyoruz...'
                     echo 'H2 in-memory database kullanildiginda data.sql otomatik yuklenir.'
                     
-                    // Backend'in hazir olmasini bekle (max 2 dakika)
-                    timeout(time: 2, unit: 'MINUTES') {
+                    // Backend'in hazir olmasini bekle (max 3 dakika)
+                    timeout(time: 3, unit: 'MINUTES') {
                         waitUntil {
                             script {
                                 def result = bat(script: 'docker logs ucus-yonetim-backend 2>&1 | findstr "Started FlightManagementApplication"', returnStatus: true)
@@ -87,7 +87,30 @@ pipeline {
                         }
                     }
 
-                    echo 'Backend basariyla basladi!'
+                    echo 'Backend Spring Boot uygulamasi basladi, simdi API endpoint lerinin hazir olmasini bekliyoruz...'
+                    
+                    // API endpoint'lerinin hazir olmasini bekle
+                    timeout(time: 2, unit: 'MINUTES') {
+                        waitUntil {
+                            script {
+                                // Backend container icinden health check
+                                def healthCheck = bat(script: 'docker exec ucus-yonetim-backend curl -f http://localhost:8080/actuator/health || exit 1', returnStatus: true)
+                                if (healthCheck == 0) {
+                                    echo '✅ Health check basarili!'
+                                    return true
+                                }
+                                echo '⏳ Health check basarisiz, tekrar deneniyor...'
+                                sleep(5)
+                                return false
+                            }
+                        }
+                    }
+                    
+                    // Ek guvenlik: API'nin tamamen hazir olmasi icin 10 saniye daha bekle
+                    echo 'API endpoint lerinin tamamen hazir olmasi icin 10 saniye bekleniyor...'
+                    sleep(10)
+
+                    echo '✅ Backend tamamen hazir!'
                     bat 'docker ps'
                 }
             }

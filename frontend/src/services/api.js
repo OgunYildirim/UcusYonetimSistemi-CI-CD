@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8081/api';
+// Docker container içinde nginx proxy kullanılır (/api -> backend:8080)
+// Local development'ta localhost:8081 kullanılır
+const API_BASE_URL = process.env.REACT_APP_API_URL ||
+  (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8081/api');
 
 const api = axios.create({
   baseURL: API_BASE_URL,
