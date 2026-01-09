@@ -150,7 +150,7 @@ Adım Adım Uygulanacak İşlemler:
    - Şehir: Test Şehir
    - Ülke: Türkiye
 7. Submit butonuna tıkla
-8. Alert mesajını kabul et
+8. Alert mesajını kabul ettt
 
 Beklenen Sonuç:
 - Havaalanı başarıyla eklenir
